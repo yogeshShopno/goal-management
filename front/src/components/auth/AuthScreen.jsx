@@ -28,7 +28,7 @@ export default function AuthScreen() {
     setLoading(true);
     try {
       await register(registerForm);
-      toast.success('Welcome to GoalMaster!');
+      toast.success('Welcome to GoaL Management!');
     } catch (error) {
       toast.error(error?.message || 'Registration failed');
     } finally {
@@ -78,7 +78,7 @@ export default function AuthScreen() {
         </div>
         
         <div className="absolute bottom-8 left-12 right-12 flex justify-between text-indigo-200/50 text-sm font-medium">
-          <span>&copy; 2026 GoalMaster Inc.</span>
+          <span>&copy; 2026 GoaL Management Inc.</span>
           <span>Terms & Privacy</span>
         </div>
       </div>
@@ -90,7 +90,7 @@ export default function AuthScreen() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white">
               <Target className="h-6 w-6" />
             </div>
-            <span className="text-2xl font-bold tracking-tight text-slate-900">GoalMaster</span>
+            <span className="text-2xl font-bold tracking-tight text-slate-900">GoaL Management</span>
           </div>
 
           <div className="mb-10">

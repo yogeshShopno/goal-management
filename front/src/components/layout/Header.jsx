@@ -20,7 +20,7 @@ export default function Header({ onOpenSidebar, onAddGoal }) {
             <Target className="h-6 w-6" />
           </div>
           <h1 className="hidden text-xl font-bold tracking-tight text-[var(--color-text)] sm:block">
-            GoalMaster
+            GoaL Management
           </h1>
         </div>
       </div>

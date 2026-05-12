@@ -17,8 +17,8 @@ const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: env.corsOrigin,
-    credentials: true,
+    origin: "*",
+    credentials: false,
   })
 );
 app.use(morgan(env.nodeEnv === "production" ? "combined" : "dev"));
