@@ -1,0 +1,28 @@
+export const MOCK_GOALS = [
+  {
+    id: 'g1',
+    name: '25 Students Admission',
+    description: 'Achieve 25 new student admissions for this academic year.',
+    startDate: '2025-07-01',
+    deadline: '2025-10-31',
+    ownerId: 'u1',
+    responsibleId: 'u2',
+    status: 'in_progress',
+    priority: 'high',
+    createdAt: '2025-07-01T10:00:00Z',
+    updatedAt: '2025-09-15T10:00:00Z',
+  },
+  {
+    id: 'g2',
+    name: 'Launch New Website',
+    description: 'Redesign and launch the company website with modern stack.',
+    startDate: '2025-08-01',
+    deadline: '2025-11-30',
+    ownerId: 'u1',
+    responsibleId: 'u3',
+    status: 'in_progress',
+    priority: 'medium',
+    createdAt: '2025-08-01T10:00:00Z',
+    updatedAt: '2025-09-20T10:00:00Z',
+  },
+];
