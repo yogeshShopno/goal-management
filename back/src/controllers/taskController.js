@@ -2,6 +2,26 @@ const Task = require("../models/Task");
 const ApiError = require("../utils/ApiError");
 const asyncHandler = require("../utils/asyncHandler");
 
+function applyNumericCompletion(task, body = {}) {
+  if (
+    task.taskType !== "numeric" ||
+    task.targetValue == null ||
+    task.targetValue <= 0
+  ) {
+    return;
+  }
+  if (body.status === "todo" || body.status === "in_progress") {
+    return;
+  }
+  const current = task.currentValue ?? 0;
+  if (current >= task.targetValue) {
+    task.status = "completed";
+    if (!task.completedAt) {
+      task.completedAt = new Date();
+    }
+  }
+}
+
 // Fetch all tasks with optional filters
 const fetchTasks = asyncHandler(async (req, res) => {
   const { actionId, status, priority, assignedUserId } = req.query;
@@ -58,7 +78,13 @@ const createTask = asyncHandler(async (req, res) => {
     priority,
     notes,
     order,
+    taskType,
+    targetValue,
+    targetType,
+    currentValue,
   } = req.body;
+
+  const type = taskType === "numeric" ? "numeric" : "checkbox";
 
   // Validation
   if (!actionId || !name || !startDate || !deadline) {
@@ -66,6 +92,21 @@ const createTask = asyncHandler(async (req, res) => {
       400,
       "actionId, name, startDate, and deadline are required"
     );
+  }
+
+  if (type === "numeric") {
+    const tv =
+      typeof targetValue === "number" ? targetValue : Number(targetValue);
+    if (!Number.isFinite(tv) || tv < 1) {
+      throw new ApiError(400, "Numeric tasks require a target value of at least 1");
+    }
+    const tt = typeof targetType === "string" ? targetType.trim() : "";
+    if (!tt) {
+      throw new ApiError(
+        400,
+        "Numeric tasks require a target type (what you are counting, e.g. calls)"
+      );
+    }
   }
 
   if (new Date(startDate) >= new Date(deadline)) {
@@ -79,6 +120,32 @@ const createTask = asyncHandler(async (req, res) => {
     taskOrder = lastTask ? (lastTask.order || 0) + 1 : 0;
   }
 
+  const numericPayload =
+    type === "numeric"
+      ? {
+          taskType: "numeric",
+          targetValue:
+            typeof targetValue === "number"
+              ? targetValue
+              : Number(targetValue),
+          targetType: String(targetType).trim(),
+          currentValue: (() => {
+            const c =
+              currentValue === undefined || currentValue === null
+                ? 0
+                : typeof currentValue === "number"
+                  ? currentValue
+                  : Number(currentValue);
+            return Number.isFinite(c) && c >= 0 ? c : 0;
+          })(),
+        }
+      : {
+          taskType: "checkbox",
+          targetValue: null,
+          targetType: null,
+          currentValue: null,
+        };
+
   const task = await Task.create({
     actionId,
     name,
@@ -91,7 +158,11 @@ const createTask = asyncHandler(async (req, res) => {
     priority,
     notes,
     order: taskOrder,
+    ...numericPayload,
   });
+
+  applyNumericCompletion(task, req.body);
+  await task.save();
 
   const populatedTask = await task.populate([
     { path: "actionId", select: "name" },
@@ -120,6 +191,10 @@ const updateTask = asyncHandler(async (req, res) => {
     notes,
     order,
     completedAt,
+    taskType,
+    targetValue,
+    targetType,
+    currentValue,
   } = req.body;
 
   const task = await Task.findById(id);
@@ -154,6 +229,57 @@ const updateTask = asyncHandler(async (req, res) => {
   if (notes !== undefined) task.notes = notes;
   if (order !== undefined) task.order = order;
   if (completedAt !== undefined) task.completedAt = completedAt;
+
+  if (taskType !== undefined) {
+    const nextType = taskType === "numeric" ? "numeric" : "checkbox";
+    task.taskType = nextType;
+    if (nextType === "checkbox") {
+      task.targetValue = null;
+      task.targetType = null;
+      task.currentValue = null;
+    }
+  }
+  if (task.taskType === "numeric") {
+    if (targetValue !== undefined) {
+      const tv =
+        typeof targetValue === "number" ? targetValue : Number(targetValue);
+      if (!Number.isFinite(tv) || tv < 1) {
+        throw new ApiError(400, "Target value must be a number of at least 1");
+      }
+      task.targetValue = tv;
+    }
+    if (targetType !== undefined) {
+      const tt = typeof targetType === "string" ? targetType.trim() : "";
+      if (!tt) {
+        throw new ApiError(400, "Target type cannot be empty for numeric tasks");
+      }
+      task.targetType = tt;
+    }
+    if (currentValue !== undefined) {
+      const c =
+        typeof currentValue === "number" ? currentValue : Number(currentValue);
+      if (!Number.isFinite(c) || c < 0) {
+        throw new ApiError(400, "Current value must be a non-negative number");
+      }
+      task.currentValue = c;
+    }
+  }
+
+  if (
+    task.taskType === "numeric" &&
+    (task.targetValue == null ||
+      !Number.isFinite(task.targetValue) ||
+      task.targetValue < 1 ||
+      !task.targetType ||
+      !String(task.targetType).trim())
+  ) {
+    throw new ApiError(
+      400,
+      "Numeric tasks must have a target value (≥ 1) and a non-empty target type"
+    );
+  }
+
+  applyNumericCompletion(task, req.body);
 
   const updatedTask = await task.save();
   const populatedTask = await updatedTask.populate([

@@ -58,6 +58,25 @@ const taskSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    /** checkbox: single done flag; numeric: count toward targetValue (labelled by targetType). */
+    taskType: {
+      type: String,
+      enum: ["checkbox", "numeric"],
+      default: "checkbox",
+    },
+    /** Goal amount for numeric tasks (e.g. 100). */
+    targetValue: {
+      type: Number,
+      default: null,
+    },
+    /** What each unit represents, e.g. "call" for 100 calls. */
+    targetType: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+      default: null,
+    },
+
   },
   {
     timestamps: true,

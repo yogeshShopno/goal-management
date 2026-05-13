@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CSS } from '@dnd-kit/utilities';
 import { useSortable, arrayMove } from '@dnd-kit/sortable';
 import {
@@ -14,7 +14,7 @@ import { format, parseISO } from 'date-fns';
 import { useAppContext } from '../../context/AppContext';
 import { useTasks } from '../../hooks/useTasks';
 import { useAuth } from '../../hooks/useAuth';
-import { TASK_STATUS } from '../../constants';
+import { TASK_STATUS, TASK_TYPE } from '../../constants';
 import { userDisplayName } from '../../utils/userDisplay';
 import PriorityBadge from '../common/PriorityBadge';
 import TaskNotes from './TaskNotes';
@@ -38,6 +38,14 @@ function TaskRowInner({
   const [notesOpen, setNotesOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const isNumeric = task.taskType === TASK_TYPE.NUMERIC;
+  const [countDraft, setCountDraft] = useState(() =>
+    isNumeric ? String(task.currentValue ?? 0) : '0'
+  );
+
+  useEffect(() => {
+    if (isNumeric) setCountDraft(String(task.currentValue ?? 0));
+  }, [isNumeric, task.id, task.currentValue]);
 
   const assignedId = task.assignedUserId?.id || task.assignedUserId;
   const canDelete = isAdmin || assignedId === currentUser.id;
@@ -52,6 +60,24 @@ function TaskRowInner({
   };
 
   const done = task.status === TASK_STATUS.COMPLETED;
+
+  const persistNumericCount = () => {
+    if (!isNumeric) return;
+    const n = Math.max(0, Number.parseFloat(countDraft));
+    const safe = Number.isFinite(n) ? Math.floor(n) : task.currentValue ?? 0;
+    setCountDraft(String(safe));
+    if (safe !== (task.currentValue ?? 0)) {
+      editTask(task.id, { ...task, currentValue: safe });
+    }
+  };
+
+  const bumpCount = (delta) => {
+    if (!isNumeric) return;
+    const base = task.currentValue ?? 0;
+    const n = Math.max(0, base + delta);
+    setCountDraft(String(n));
+    editTask(task.id, { ...task, currentValue: n });
+  };
 
   return (
     <li
@@ -75,13 +101,41 @@ function TaskRowInner({
         ) : (
           <span className="hidden w-5 md:block" aria-hidden />
         )}
-        <input
-          type="checkbox"
-          className="mt-1 h-4 w-4 shrink-0 rounded border-[var(--color-border)] text-[var(--color-primary)]"
-          checked={done}
-          onChange={(e) => completeTask(task.id, e.target.checked)}
-          aria-label="Mark task complete"
-        />
+        {isNumeric ? (
+          <div className="mt-0.5 flex shrink-0 flex-col items-stretch gap-1 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => bumpCount(-1)}
+                className="rounded border border-[var(--color-border)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
+                aria-label="Decrease count"
+              >
+                −
+              </button>
+        
+              <button
+                type="button"
+                onClick={() => bumpCount(1)}
+                className="rounded border border-[var(--color-border)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
+                aria-label="Increase count"
+              >
+                +
+              </button>
+            </div>
+            <span className="text-center text-[11px] text-[var(--color-text-muted)] sm:text-left">
+              / {task.targetValue}
+              {task.targetType ? ` ${task.targetType}` : ''}
+            </span>
+          </div>
+        ) : (
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4 shrink-0 rounded border-[var(--color-border)] text-[var(--color-primary)]"
+            checked={done}
+            onChange={(e) => completeTask(task.id, e.target.checked)}
+            aria-label="Mark task complete"
+          />
+        )}
         <div className="min-w-0 flex-1">
           <div className={`text-sm font-semibold ${done ? 'text-[var(--color-text-muted)] line-through' : 'text-[var(--color-text)]'}`}>
             {task.name}

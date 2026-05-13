@@ -16,6 +16,11 @@ export const TASK_STATUS = {
   IN_PROGRESS: 'in_progress',
   COMPLETED: 'completed',
 };
+/** How progress is tracked: checkbox (done / not done) or numeric (count toward a target). */
+export const TASK_TYPE = {
+  CHECKBOX: 'checkbox',
+  NUMERIC: 'numeric',
+};
 export const PRIORITY = {
   HIGH: 'high',
   MEDIUM: 'medium',

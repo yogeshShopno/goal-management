@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Modal from '../common/Modal';
 import { apiHandler } from '../../utils/apiHandler';
 import { fetchUsers } from '../../api/userApi';
-import { PRIORITY, TASK_STATUS } from '../../constants';
+import { PRIORITY, TASK_STATUS, TASK_TYPE } from '../../constants';
 
 const empty = {
   name: '',
@@ -14,6 +14,10 @@ const empty = {
   priority: PRIORITY.MEDIUM,
   status: TASK_STATUS.TODO,
   notes: '',
+  taskType: TASK_TYPE.CHECKBOX,
+  targetValue: '',
+  targetType: '',
+  currentValue: '0',
 };
 
 export default function TaskForm({ open, onClose, actionId, initialTask, onCreate, onSave }) {
@@ -30,6 +34,8 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
     if (!open) return;
     setAttempted(false);
     if (initialTask) {
+      const tt =
+        initialTask.taskType === TASK_TYPE.NUMERIC ? TASK_TYPE.NUMERIC : TASK_TYPE.CHECKBOX;
       setForm({
         name: initialTask.name || '',
         description: initialTask.description || '',
@@ -40,6 +46,16 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
         priority: initialTask.priority || PRIORITY.MEDIUM,
         status: initialTask.status || TASK_STATUS.TODO,
         notes: initialTask.notes || '',
+        taskType: tt,
+        targetValue:
+          initialTask.targetValue != null && initialTask.targetValue !== ''
+            ? String(initialTask.targetValue)
+            : '',
+        targetType: initialTask.targetType || '',
+        currentValue:
+          initialTask.currentValue != null && initialTask.currentValue !== ''
+            ? String(initialTask.currentValue)
+            : '0',
       });
     } else {
       setForm(empty);
@@ -51,6 +67,13 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
     if (!form.name.trim()) e.name = true;
     if (!form.startDate) e.startDate = true;
     if (!form.deadline) e.deadline = true;
+    if (form.taskType === TASK_TYPE.NUMERIC) {
+      const tv = Number(form.targetValue);
+      if (!Number.isFinite(tv) || tv < 1) e.targetValue = true;
+      if (!form.targetType.trim()) e.targetType = true;
+      const cv = Number(form.currentValue);
+      if (!Number.isFinite(cv) || cv < 0) e.currentValue = true;
+    }
     return e;
   }, [form]);
 
@@ -67,6 +90,13 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
   const submit = () => {
     setAttempted(true);
     if (!form.name.trim() || !form.startDate || !form.deadline) return;
+    if (form.taskType === TASK_TYPE.NUMERIC) {
+      const tv = Number(form.targetValue);
+      const cv = Number(form.currentValue);
+      if (!Number.isFinite(tv) || tv < 1 || !form.targetType.trim()) return;
+      if (!Number.isFinite(cv) || cv < 0) return;
+    }
+    const isNumeric = form.taskType === TASK_TYPE.NUMERIC;
     const payload = {
       name: form.name.trim(),
       description: form.description.trim(),
@@ -78,6 +108,18 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
       status: form.status,
       notes: form.notes,
       completedAt: initialTask?.completedAt ?? null,
+      taskType: isNumeric ? TASK_TYPE.NUMERIC : TASK_TYPE.CHECKBOX,
+      ...(isNumeric
+        ? {
+            targetValue: Number(form.targetValue),
+            targetType: form.targetType.trim(),
+            currentValue: Number(form.currentValue) || 0,
+          }
+        : {
+            targetValue: null,
+            targetType: null,
+            currentValue: null,
+          }),
     };
     if (initialTask) onSave?.(initialTask.id, { ...initialTask, ...payload });
     else onCreate?.({ ...payload, actionId });
@@ -126,6 +168,73 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
             onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
           />
         </div>
+        <div>
+          <span className="text-sm font-medium text-[var(--color-text)]">Task progress type</span>
+          <div className="mt-2 flex flex-wrap gap-4">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--color-text)]">
+              <input
+                type="radio"
+                name="taskType"
+                checked={form.taskType === TASK_TYPE.CHECKBOX}
+                onChange={() =>
+                  setForm((f) => ({
+                    ...f,
+                    taskType: TASK_TYPE.CHECKBOX,
+                    targetValue: '',
+                    targetType: '',
+                    currentValue: '0',
+                  }))
+                }
+              />
+              Checkbox (done / not done)
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--color-text)]">
+              <input
+                type="radio"
+                name="taskType"
+                checked={form.taskType === TASK_TYPE.NUMERIC}
+                onChange={() =>
+                  setForm((f) => ({
+                    ...f,
+                    taskType: TASK_TYPE.NUMERIC,
+                    currentValue: f.currentValue || '0',
+                  }))
+                }
+              />
+              Numeric (count toward a target)
+            </label>
+          </div>
+        </div>
+        {form.taskType === TASK_TYPE.NUMERIC ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div>
+              <label className="text-sm font-medium text-[var(--color-text)]">Target value *</label>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                className={fieldClass('targetValue')}
+                value={form.targetValue}
+                onChange={(e) => setForm((f) => ({ ...f, targetValue: e.target.value }))}
+                placeholder="e.g. 100"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-[var(--color-text)]">Target type *</label>
+              <input
+                className={fieldClass('targetType')}
+                value={form.targetType}
+                onChange={(e) => setForm((f) => ({ ...f, targetType: e.target.value }))}
+                placeholder="e.g. call"
+              />
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                What each unit is (e.g. task &quot;Call customers&quot;, target 100, type call → 100
+                calls).
+              </p>
+            </div>
+
+          </div>
+        ) : null}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="text-sm font-medium text-[var(--color-text)]">Start date *</label>
