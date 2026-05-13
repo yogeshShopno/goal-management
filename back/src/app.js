@@ -10,6 +10,7 @@ const buildUserRoutes = require("./routes/userRoutes");
 const buildGoalRoutes = require("./routes/goalRoutes");
 const buildActionRoutes = require("./routes/actionRoutes");
 const buildTaskRoutes = require("./routes/taskRoutes");
+const buildStaffRoutes = require("./routes/staffRoutes");
 const { errorHandler, notFound } = require("./middlewares/errorMiddleware");
 
 const app = express();
@@ -49,6 +50,7 @@ v1Router.use("/users", buildUserRoutes(env));
 v1Router.use("/goals", buildGoalRoutes(env));
 v1Router.use("/actions", buildActionRoutes(env));
 v1Router.use("/tasks", buildTaskRoutes(env));
+v1Router.use("/staff", buildStaffRoutes(env));
 
 app.use("/api/v1", v1Router);
 

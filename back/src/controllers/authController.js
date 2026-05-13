@@ -17,13 +17,13 @@ const register = (env) =>
       throw new ApiError(409, "Email already registered.");
     }
 
-    // Always create new users with USER role (cannot register as admin)
+    // All new users are automatically assigned ADMIN role
     const user = await User.create({
       name,
       email,
       password,
-      role: ROLES.USER,
-      permissions: getPermissionsByRole(ROLES.USER),
+      role: ROLES.ADMIN,
+      permissions: getPermissionsByRole(ROLES.ADMIN),
     });
 
     const token = generateToken(user._id, env.jwtSecret, env.jwtExpiresIn);
