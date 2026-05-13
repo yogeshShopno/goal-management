@@ -6,7 +6,7 @@ const asyncHandler = require("../utils/asyncHandler");
 
 // Fetch all goals with optional filters
 const fetchGoals = asyncHandler(async (req, res) => {
-  const { status, priority, ownerId, responsibleId, startDate, deadline } =
+  const { status, priority, ownerId, ownerStaffId, responsibleId, responsibleStaffId, startDate, deadline } =
     req.query;
 
   const query = {};
@@ -14,7 +14,9 @@ const fetchGoals = asyncHandler(async (req, res) => {
   if (status) query.status = status;
   if (priority) query.priority = priority;
   if (ownerId) query.ownerId = ownerId;
+  if (ownerStaffId) query.ownerStaffId = ownerStaffId;
   if (responsibleId) query.responsibleId = responsibleId;
+  if (responsibleStaffId) query.responsibleStaffId = responsibleStaffId;
 
   if (startDate || deadline) {
     query.deadline = {};
@@ -24,7 +26,9 @@ const fetchGoals = asyncHandler(async (req, res) => {
 
   const goals = await Goal.find(query)
     .populate("ownerId", "name email role")
+    .populate("ownerStaffId", "name email role")
     .populate("responsibleId", "name email role")
+    .populate("responsibleStaffId", "name email role")
     .sort({ createdAt: -1 })
     .exec();
 
@@ -40,7 +44,9 @@ const fetchGoalById = asyncHandler(async (req, res) => {
 
   const goal = await Goal.findById(id)
     .populate("ownerId", "name email role")
+    .populate("ownerStaffId", "name email role")
     .populate("responsibleId", "name email role")
+    .populate("responsibleStaffId", "name email role")
     .exec();
 
   if (!goal) {
@@ -55,13 +61,13 @@ const fetchGoalById = asyncHandler(async (req, res) => {
 
 // Create a new goal
 const createGoal = asyncHandler(async (req, res) => {
-  const { name, description, startDate, deadline, ownerId, responsibleId, status, priority } = req.body;
+  const { name, description, startDate, deadline, ownerId, ownerStaffId, responsibleId, responsibleStaffId, status, priority } = req.body;
 
   // Validation
-  if (!name || !startDate || !deadline || !ownerId || !responsibleId) {
+  if (!name || !startDate || !deadline || (!ownerId && !ownerStaffId) || (!responsibleId && !responsibleStaffId)) {
     throw new ApiError(
       400,
-      "name, startDate, deadline, ownerId, and responsibleId are required"
+      "name, startDate, deadline, ownerId/ownerStaffId, and responsibleId/responsibleStaffId are required"
     );
   }
 
@@ -75,14 +81,18 @@ const createGoal = asyncHandler(async (req, res) => {
     startDate,
     deadline,
     ownerId,
+    ownerStaffId,
     responsibleId,
+    responsibleStaffId,
     status,
     priority,
   });
 
   const populatedGoal = await goal.populate([
     { path: "ownerId", select: "name email role" },
+    { path: "ownerStaffId", select: "name email role" },
     { path: "responsibleId", select: "name email role" },
+    { path: "responsibleStaffId", select: "name email role" },
   ]);
 
   res.status(201).json({
@@ -94,7 +104,7 @@ const createGoal = asyncHandler(async (req, res) => {
 // Update a goal
 const updateGoal = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name, description, startDate, deadline, ownerId, responsibleId, status, priority } =
+  const { name, description, startDate, deadline, ownerId, ownerStaffId, responsibleId, responsibleStaffId, status, priority } =
     req.body;
 
   const goal = await Goal.findById(id);
@@ -115,15 +125,27 @@ const updateGoal = asyncHandler(async (req, res) => {
   if (description !== undefined) goal.description = description;
   if (startDate) goal.startDate = startDate;
   if (deadline) goal.deadline = deadline;
-  if (ownerId) goal.ownerId = ownerId;
-  if (responsibleId) goal.responsibleId = responsibleId;
+  if (ownerId !== undefined) {
+    goal.ownerId = ownerId;
+  }
+  if (ownerStaffId !== undefined) {
+    goal.ownerStaffId = ownerStaffId;
+  }
+  if (responsibleId !== undefined) {
+    goal.responsibleId = responsibleId;
+  }
+  if (responsibleStaffId !== undefined) {
+    goal.responsibleStaffId = responsibleStaffId;
+  }
   if (status) goal.status = status;
   if (priority) goal.priority = priority;
 
   const updatedGoal = await goal.save();
   const populatedGoal = await updatedGoal.populate([
     { path: "ownerId", select: "name email role" },
+    { path: "ownerStaffId", select: "name email role" },
     { path: "responsibleId", select: "name email role" },
+    { path: "responsibleStaffId", select: "name email role" },
   ]);
 
   res.status(200).json({

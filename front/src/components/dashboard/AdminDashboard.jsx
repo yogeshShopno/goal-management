@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { LayoutGrid, Users } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
-import { useGoals } from '../../hooks/useGoals';
+import { useAuth } from '../../hooks/useAuth';
+import { useGoals, filterGoalsForUser } from '../../hooks/useGoals';
 import AppShell from '../layout/AppShell';
 import Sidebar from '../layout/Sidebar';
 import FilterBar from '../common/FilterBar';
@@ -15,8 +16,13 @@ const tabBtn =
 
 export default function AdminDashboard() {
   const { state } = useAppContext();
+  const { currentUser } = useAuth();
+  const scoped = useMemo(
+    () => filterGoalsForUser(state.goals, currentUser),
+    [state.goals, currentUser]
+  );
   const { goals, filter, sort, setFilter, setSort, selectGoal, selectedGoalId, addGoal } =
-    useGoals();
+    useGoals(scoped);
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard');
 
@@ -27,14 +33,14 @@ export default function AdminDashboard() {
   }, [goals, selectedGoalId, selectGoal]);
 
   const selectedGoal = useMemo(
-    () => state.goals.find((g) => g.id === selectedGoalId) || null,
-    [state.goals, selectedGoalId]
+    () => goals.find((g) => g.id === selectedGoalId) || null,
+    [goals, selectedGoalId]
   );
 
   return (
     <>
       <AppShell
-        stats={<StatsCards goals={state.goals} actions={state.actions} tasks={state.tasks} />}
+        stats={<StatsCards goals={goals} actions={state.actions} tasks={state.tasks} />}
         sidebar={
           <Sidebar goals={goals} selectedGoalId={selectedGoalId} onSelectGoal={selectGoal} />
         }

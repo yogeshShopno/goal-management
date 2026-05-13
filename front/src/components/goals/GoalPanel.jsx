@@ -45,6 +45,9 @@ export default function GoalPanel({ goal }) {
     [goalActions, state.tasks]
   );
 
+  const owner = goal?.ownerId || goal?.ownerStaffId;
+  const responsible = goal?.responsibleId || goal?.responsibleStaffId;
+
   if (!goal) {
     return (
       <div className="flex min-h-[500px] flex-col items-center justify-center rounded-2xl bg-white p-12 text-center shadow-sm border border-dashed border-[var(--color-border)] animate-fade-in">
@@ -92,7 +95,18 @@ export default function GoalPanel({ goal }) {
               <div className="flex flex-col">
                 <span className="text-[10px] font-bold uppercase tracking-widest leading-none mb-0.5">Owner</span>
                 <span className="text-sm font-semibold text-[var(--color-text)]">
-                  {userDisplayName(goal.ownerId, state.users)}
+                  {userDisplayName(owner, state.users)}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5 text-[var(--color-text-muted)]">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-500">
+                <User className="h-4 w-4" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold uppercase tracking-widest leading-none mb-0.5">Responsible</span>
+                <span className="text-sm font-semibold text-[var(--color-text)]">
+                  {userDisplayName(responsible, state.users)}
                 </span>
               </div>
             </div>

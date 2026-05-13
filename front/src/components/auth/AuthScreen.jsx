@@ -133,12 +133,7 @@ export default function AuthScreen() {
             </div>
 
             <div className="space-y-1.5">
-              <div className="flex justify-between items-center ml-1">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Password</label>
-                {!isRegisterMode && (
-                  <button type="button" className="text-[11px] font-bold text-indigo-600 hover:underline">Forgot password?</button>
-                )}
-              </div>
+              
               <input
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm transition-all focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 outline-none"
                 type="password"

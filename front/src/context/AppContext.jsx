@@ -9,7 +9,6 @@ import {
   deleteTask,
   reorderTasksForAction,
 } from '../api/taskApi';
-import { fetchUsers } from '../api/userApi';
 import { GOAL_STATUS, ACTION_STATUS, TASK_STATUS, PRIORITY } from '../constants';
 
 const AppContext = createContext(null);
@@ -114,20 +113,11 @@ export function AppProvider({ children }) {
     });
   }, []);
 
-  const loadUsers = useCallback(async () => {
-    await apiHandler(() => fetchUsers(), {
-      setLoading: (v) => dispatch({ type: 'SET_LOADING', payload: { users: v } }),
-      onSuccess: (data) => dispatch({ type: 'SET_USERS', payload: data }),
-      errorMsg: 'Failed to load users',
-    });
-  }, []);
-
   useEffect(() => {
     loadGoals();
     loadActions();
     loadTasks();
-    loadUsers();
-  }, [loadGoals, loadActions, loadTasks, loadUsers]);
+  }, [loadGoals, loadActions, loadTasks]);
 
   const addGoal = useCallback(async (payload) => {
     await apiHandler(() => createGoal(payload), {
@@ -262,7 +252,6 @@ export function AppProvider({ children }) {
     loadGoals,
     loadActions,
     loadTasks,
-    loadUsers,
     addGoal,
     editGoal,
     removeGoal,

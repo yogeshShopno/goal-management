@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Modal from '../common/Modal';
 import { useAuth } from '../../hooks/useAuth';
 import { apiHandler } from '../../utils/apiHandler';
-import { fetchUsersAndStaff } from '../../api/userApi';
+import { staffApi } from '../../api/staffApi';
 import { GOAL_STATUS, PRIORITY } from '../../constants';
 
 const empty = {
@@ -17,14 +17,17 @@ const empty = {
 };
 
 export default function GoalForm({ open, onClose, initialGoal, onSave }) {
-  const { isAdmin } = useAuth();
-  const [users, setUsers] = useState([]);
+  const { isAdmin, currentUser } = useAuth();
+  const [staff, setStaff] = useState([]);
   const [form, setForm] = useState(empty);
   const [attempted, setAttempted] = useState(false);
 
   useEffect(() => {
     if (!open || !isAdmin) return;
-    apiHandler(() => fetchUsersAndStaff(), { onSuccess: (data) => setUsers(data || []) });
+    apiHandler(
+      () => staffApi.getStaff({ limit: 1000 }),
+      { onSuccess: (data) => setStaff(data.staff || []) }
+    );
   }, [open, isAdmin]);
 
   useEffect(() => {
@@ -36,15 +39,26 @@ export default function GoalForm({ open, onClose, initialGoal, onSave }) {
         description: initialGoal.description || '',
         startDate: initialGoal.startDate || '',
         deadline: initialGoal.deadline || '',
-        ownerId: initialGoal.ownerId?.id || initialGoal.ownerId || '',
-        responsibleId: initialGoal.responsibleId?.id || initialGoal.responsibleId || '',
+        ownerId:
+          initialGoal.ownerId?.id ||
+          initialGoal.ownerId ||
+          initialGoal.ownerStaffId?.id ||
+          initialGoal.ownerStaffId ||
+          currentUser?.id ||
+          '',
+        responsibleId:
+          initialGoal.responsibleId?.id ||
+          initialGoal.responsibleId ||
+          initialGoal.responsibleStaffId?.id ||
+          initialGoal.responsibleStaffId ||
+          '',
         status: initialGoal.status || GOAL_STATUS.IN_PROGRESS,
         priority: initialGoal.priority || PRIORITY.MEDIUM,
       });
     } else {
-      setForm(empty);
+      setForm({ ...empty, ownerId: currentUser?.id || '' });
     }
-  }, [open, initialGoal]);
+  }, [open, initialGoal, currentUser]);
 
   const errors = useMemo(() => {
     const e = {};
@@ -73,11 +87,11 @@ export default function GoalForm({ open, onClose, initialGoal, onSave }) {
     if (!form.name.trim() || !form.startDate || !form.deadline || !form.ownerId || !form.responsibleId) return;
     
     // Find owners to determine if they're staff or users
-    const owner = users.find(u => u.id === form.ownerId);
-    const responsible = users.find(u => u.id === form.responsibleId);
+    const owner = staff.find((u) => u.id === form.ownerId);
+    const responsible = staff.find((u) => u.id === form.responsibleId);
     const isOwnerStaff = owner?.assignmentType === 'staff';
     const isResponsibleStaff = responsible?.assignmentType === 'staff';
-    
+
     onSave?.({
       name: form.name.trim(),
       description: form.description.trim(),
@@ -164,10 +178,10 @@ export default function GoalForm({ open, onClose, initialGoal, onSave }) {
               value={form.responsibleId}
               onChange={(e) => setForm((f) => ({ ...f, responsibleId: e.target.value }))}
             >
-              <option value="">Select user</option>
-              {users.map((u) => (
+              <option value="">Select staff</option>
+              {staff.map((u) => (
                 <option key={u.id} value={u.id}>
-                  {u.name} {u.assignmentType === 'staff' ? '(Staff)' : ''}
+                  {u.name}
                 </option>
               ))}
             </select>
