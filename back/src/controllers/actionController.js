@@ -17,7 +17,9 @@ const fetchActions = asyncHandler(async (req, res) => {
   const actions = await Action.find(query)
     .populate("goalId", "name")
     .populate("ownerId", "name email role")
+    .populate("ownerStaffId", "name email role")
     .populate("assignedUserIds", "name email role")
+    .populate("assignedStaffIds", "name email role")
     .sort({ createdAt: -1 })
     .exec();
 
@@ -34,7 +36,9 @@ const fetchActionById = asyncHandler(async (req, res) => {
   const action = await Action.findById(id)
     .populate("goalId", "name")
     .populate("ownerId", "name email role")
+    .populate("ownerStaffId", "name email role")
     .populate("assignedUserIds", "name email role")
+    .populate("assignedStaffIds", "name email role")
     .exec();
 
   if (!action) {
@@ -49,14 +53,14 @@ const fetchActionById = asyncHandler(async (req, res) => {
 
 // Create a new action
 const createAction = asyncHandler(async (req, res) => {
-  const { goalId, name, description, startDate, deadline, ownerId, assignedUserIds, status, priority } =
+  const { goalId, name, description, startDate, deadline, ownerId, ownerStaffId, assignedUserIds, assignedStaffIds, status, priority } =
     req.body;
 
   // Validation
-  if (!goalId || !name || !startDate || !deadline || !ownerId) {
+  if (!goalId || !name || !startDate || !deadline || (!ownerId && !ownerStaffId)) {
     throw new ApiError(
       400,
-      "goalId, name, startDate, deadline, and ownerId are required"
+      "goalId, name, startDate, deadline, and ownerId/ownerStaffId are required"
     );
   }
 
@@ -71,7 +75,9 @@ const createAction = asyncHandler(async (req, res) => {
     startDate,
     deadline,
     ownerId,
+    ownerStaffId,
     assignedUserIds: assignedUserIds || [],
+    assignedStaffIds: assignedStaffIds || [],
     status,
     priority,
   });
@@ -79,7 +85,9 @@ const createAction = asyncHandler(async (req, res) => {
   const populatedAction = await action.populate([
     { path: "goalId", select: "name" },
     { path: "ownerId", select: "name email role" },
+    { path: "ownerStaffId", select: "name email role" },
     { path: "assignedUserIds", select: "name email role" },
+    { path: "assignedStaffIds", select: "name email role" },
   ]);
 
   res.status(201).json({
@@ -91,7 +99,7 @@ const createAction = asyncHandler(async (req, res) => {
 // Update an action
 const updateAction = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { goalId, name, description, startDate, deadline, ownerId, assignedUserIds, status, priority } =
+  const { goalId, name, description, startDate, deadline, ownerId, ownerStaffId, assignedUserIds, assignedStaffIds, status, priority } =
     req.body;
 
   const action = await Action.findById(id);
@@ -113,8 +121,10 @@ const updateAction = asyncHandler(async (req, res) => {
   if (description !== undefined) action.description = description;
   if (startDate) action.startDate = startDate;
   if (deadline) action.deadline = deadline;
-  if (ownerId) action.ownerId = ownerId;
-  if (assignedUserIds) action.assignedUserIds = assignedUserIds;
+  if (ownerId !== undefined) action.ownerId = ownerId;
+  if (ownerStaffId !== undefined) action.ownerStaffId = ownerStaffId;
+  if (assignedUserIds !== undefined) action.assignedUserIds = assignedUserIds;
+  if (assignedStaffIds !== undefined) action.assignedStaffIds = assignedStaffIds;
   if (status) action.status = status;
   if (priority) action.priority = priority;
 
@@ -122,7 +132,9 @@ const updateAction = asyncHandler(async (req, res) => {
   const populatedAction = await updatedAction.populate([
     { path: "goalId", select: "name" },
     { path: "ownerId", select: "name email role" },
+    { path: "ownerStaffId", select: "name email role" },
     { path: "assignedUserIds", select: "name email role" },
+    { path: "assignedStaffIds", select: "name email role" },
   ]);
 
   res.status(200).json({

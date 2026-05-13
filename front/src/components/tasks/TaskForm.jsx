@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Modal from '../common/Modal';
 import { apiHandler } from '../../utils/apiHandler';
 import { fetchUsersAndStaff } from '../../api/userApi';
+import { formatDateForInput } from '../../utils/dateUtils';
 import { PRIORITY, TASK_STATUS, TASK_TYPE } from '../../constants';
 
 const empty = {
@@ -38,8 +39,8 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
       setForm({
         name: initialTask.name || '',
         description: initialTask.description || '',
-        startDate: initialTask.startDate || '',
-        deadline: initialTask.deadline || '',
+        startDate: formatDateForInput(initialTask.startDate) || '',
+        deadline: formatDateForInput(initialTask.deadline) || '',
         assignedUserId: initialTask.assignedUserId?.id || initialTask.assignedUserId || '',
         
         priority: initialTask.priority || PRIORITY.MEDIUM,
@@ -260,21 +261,7 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
             />
           </div>
         </div>
-        <div>
-          <label className="text-sm font-medium text-[var(--color-text)]">Assigned user</label>
-          <select
-            className={fieldClass()}
-            value={form.assignedUserId}
-            onChange={(e) => setForm((f) => ({ ...f, assignedUserId: e.target.value }))}
-          >
-            <option value="">Select user or staff</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name} {u.assignmentType === 'staff' ? '(Staff)' : ''}
-              </option>
-            ))}
-          </select>
-        </div>
+
      
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>

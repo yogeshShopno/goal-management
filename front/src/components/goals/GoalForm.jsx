@@ -3,6 +3,7 @@ import Modal from '../common/Modal';
 import { useAuth } from '../../hooks/useAuth';
 import { apiHandler } from '../../utils/apiHandler';
 import { staffApi } from '../../api/staffApi';
+import { formatDateForInput } from '../../utils/dateUtils';
 import { GOAL_STATUS, PRIORITY } from '../../constants';
 
 const empty = {
@@ -37,8 +38,8 @@ export default function GoalForm({ open, onClose, initialGoal, onSave }) {
       setForm({
         name: initialGoal.name || '',
         description: initialGoal.description || '',
-        startDate: initialGoal.startDate || '',
-        deadline: initialGoal.deadline || '',
+        startDate: formatDateForInput(initialGoal.startDate) || '',
+        deadline: formatDateForInput(initialGoal.deadline) || '',
         ownerId:
           initialGoal.ownerId?.id ||
           initialGoal.ownerId ||

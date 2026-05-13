@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Modal from '../common/Modal';
 import { apiHandler } from '../../utils/apiHandler';
 import { fetchUsersAndStaff } from '../../api/userApi';
+import { formatDateForInput } from '../../utils/dateUtils';
 import { ACTION_STATUS, PRIORITY } from '../../constants';
 
 const empty = {
@@ -33,8 +34,8 @@ export default function ActionForm({ open, onClose, goalId, initialAction, onCre
       setForm({
         name: initialAction.name || '',
         description: initialAction.description || '',
-        startDate: initialAction.startDate || '',
-        deadline: initialAction.deadline || '',
+        startDate: formatDateForInput(initialAction.startDate) || '',
+        deadline: formatDateForInput(initialAction.deadline) || '',
         ownerId: initialAction.ownerId?.id || initialAction.ownerId || initialAction.ownerStaffId || '',
         assignedUserIds: (initialAction.assignedUserIds || []).map((u) => u.id || u),
         assignedStaffIds: (initialAction.assignedStaffIds || []).map((s) => s.id || s),
@@ -162,43 +163,7 @@ export default function ActionForm({ open, onClose, goalId, initialAction, onCre
             />
           </div>
         </div>
-        <div>
-          <label className="text-sm font-medium text-[var(--color-text)]">Owner *</label>
-          <select
-            className={fieldClass('ownerId')}
-            value={form.ownerId}
-            onChange={(e) => setForm((f) => ({ ...f, ownerId: e.target.value }))}
-          >
-            <option value="">Select user</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name} {u.assignmentType === 'staff' ? '(Staff)' : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <p className="text-sm font-medium text-[var(--color-text)]">Assigned users</p>
-          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {users.map((u) => {
-              const isStaff = u.assignmentType === 'staff';
-              const isChecked = isStaff
-                ? form.assignedStaffIds.includes(u.id)
-                : form.assignedUserIds.includes(u.id);
-              return (
-                <label key={u.id} className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => toggleAssignee(u.id, isStaff)}
-                    className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)]"
-                  />
-                  {u.name} {isStaff ? '(Staff)' : ''}
-                </label>
-              );
-            })}
-          </div>
-        </div>
+       
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="text-sm font-medium text-[var(--color-text)]">Status</label>
