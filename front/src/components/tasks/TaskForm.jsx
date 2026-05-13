@@ -10,7 +10,6 @@ const empty = {
   startDate: '',
   deadline: '',
   assignedUserId: '',
-  assignedTeam: '',
   priority: PRIORITY.MEDIUM,
   status: TASK_STATUS.TODO,
   notes: '',
@@ -42,7 +41,7 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
         startDate: initialTask.startDate || '',
         deadline: initialTask.deadline || '',
         assignedUserId: initialTask.assignedUserId?.id || initialTask.assignedUserId || '',
-        assignedTeam: initialTask.assignedTeam || '',
+        
         priority: initialTask.priority || PRIORITY.MEDIUM,
         status: initialTask.status || TASK_STATUS.TODO,
         notes: initialTask.notes || '',
@@ -102,14 +101,17 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
     const assignedPerson = users.find(u => u.id === form.assignedUserId);
     const isStaff = assignedPerson?.assignmentType === 'staff';
     
+    const resolvedActionId =
+      actionId || initialTask?.actionId?.id || initialTask?.actionId || null;
+
     const payload = {
       name: form.name.trim(),
       description: form.description.trim(),
       startDate: form.startDate,
       deadline: form.deadline,
+      actionId: resolvedActionId,
       assignedUserId: isStaff ? null : (form.assignedUserId || null),
       assignedStaffId: isStaff ? form.assignedUserId : null,
-      assignedTeam: form.assignedTeam.trim(),
       priority: form.priority,
       status: form.status,
       notes: form.notes,
@@ -127,8 +129,8 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
             currentValue: null,
           }),
     };
-    if (initialTask) onSave?.(initialTask.id, { ...initialTask, ...payload });
-    else onCreate?.({ ...payload, actionId });
+    if (initialTask) onSave?.(initialTask.id, payload);
+    else onCreate?.(payload);
     onClose?.();
   };
 
@@ -175,7 +177,7 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
           />
         </div>
         <div>
-          <span className="text-sm font-medium text-[var(--color-text)]">Task progress type</span>
+          <span className="text-sm font-medium text-[var(--color-text)]">Task type</span>
           <div className="mt-2 flex flex-wrap gap-4">
             <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--color-text)]">
               <input
@@ -192,7 +194,7 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
                   }))
                 }
               />
-              Checkbox (done / not done)
+              Checkbox
             </label>
             <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--color-text)]">
               <input
@@ -207,7 +209,7 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
                   }))
                 }
               />
-              Numeric (count toward a target)
+              Numeric
             </label>
           </div>
         </div>
@@ -233,10 +235,7 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
                 onChange={(e) => setForm((f) => ({ ...f, targetType: e.target.value }))}
                 placeholder="e.g. call"
               />
-              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                What each unit is (e.g. task &quot;Call customers&quot;, target 100, type call → 100
-                calls).
-              </p>
+             
             </div>
 
           </div>
@@ -276,14 +275,7 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
             ))}
           </select>
         </div>
-        <div>
-          <label className="text-sm font-medium text-[var(--color-text)]">Team</label>
-          <input
-            className={fieldClass()}
-            value={form.assignedTeam}
-            onChange={(e) => setForm((f) => ({ ...f, assignedTeam: e.target.value }))}
-          />
-        </div>
+     
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="text-sm font-medium text-[var(--color-text)]">Status</label>

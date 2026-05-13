@@ -34,11 +34,7 @@ const taskSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Staff",
     },
-    assignedTeam: {
-      type: String,
-      trim: true,
-      maxlength: 100,
-    },
+
     priority: {
       type: String,
       enum: ["low", "medium", "high"],

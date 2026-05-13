@@ -31,7 +31,7 @@ const buildTaskRoutes = (env) => {
   router.put("/:id", auth, requirePermissions("manage_tasks"), updateTask);
 
   // PATCH /tasks/:id/progress - Update numeric task progress (requires manage_tasks OR assigned to task)
-  router.patch("/:id/progress", auth, requirePermissions("manage_tasks"), updateNumericProgress);
+  router.patch("/:id/progress", auth, updateNumericProgress);
 
   // DELETE /tasks/:id - Delete a task (requires manage_tasks permission)
   router.delete("/:id", auth, requirePermissions("manage_tasks"), deleteTask);

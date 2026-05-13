@@ -156,21 +156,7 @@ export default function GoalForm({ open, onClose, initialGoal, onSave }) {
           </div>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div>
-            <label className="text-sm font-medium text-[var(--color-text)]">Goal owner *</label>
-            <select
-              className={fieldClass('ownerId')}
-              value={form.ownerId}
-              onChange={(e) => setForm((f) => ({ ...f, ownerId: e.target.value }))}
-            >
-              <option value="">Select user</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name} {u.assignmentType === 'staff' ? '(Staff)' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
+
           <div>
             <label className="text-sm font-medium text-[var(--color-text)]">Responsible *</label>
             <select
@@ -186,23 +172,7 @@ export default function GoalForm({ open, onClose, initialGoal, onSave }) {
               ))}
             </select>
           </div>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div>
-            <label className="text-sm font-medium text-[var(--color-text)]">Status</label>
-            <select
-              className={fieldClass()}
-              value={form.status}
-              onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-            >
-              {Object.values(GOAL_STATUS).map((s) => (
-                <option key={s} value={s}>
-                  {s.replaceAll('_', ' ')}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
+           <div>
             <label className="text-sm font-medium text-[var(--color-text)]">Priority</label>
             <select
               className={fieldClass()}
@@ -215,6 +185,7 @@ export default function GoalForm({ open, onClose, initialGoal, onSave }) {
             </select>
           </div>
         </div>
+        
       </div>
     </Modal>
   );

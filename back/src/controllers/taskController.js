@@ -76,7 +76,7 @@ const createTask = asyncHandler(async (req, res) => {
     deadline,
     assignedUserId,
     assignedStaffId,
-    assignedTeam,
+
     status,
     priority,
     notes,
@@ -157,7 +157,7 @@ const createTask = asyncHandler(async (req, res) => {
     deadline,
     assignedUserId,
     assignedStaffId,
-    assignedTeam,
+ 
     status,
     priority,
     notes,
@@ -191,7 +191,7 @@ const updateTask = asyncHandler(async (req, res) => {
     deadline,
     assignedUserId,
     assignedStaffId,
-    assignedTeam,
+
     status,
     priority,
     notes,
@@ -224,7 +224,6 @@ const updateTask = asyncHandler(async (req, res) => {
   if (deadline) task.deadline = deadline;
   if (assignedUserId !== undefined) task.assignedUserId = assignedUserId;
   if (assignedStaffId !== undefined) task.assignedStaffId = assignedStaffId;
-  if (assignedTeam !== undefined) task.assignedTeam = assignedTeam;
   if (status) {
     task.status = status;
     // Auto-set completedAt when status becomes "completed"
