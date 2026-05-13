@@ -5,6 +5,8 @@ import StaffForm from "./StaffForm";
 import Modal from "../common/Modal";
 import ConfirmDialog from "../common/ConfirmDialog";
 
+const staffIdOf = (member) => member?.id ?? member?._id;
+
 const StaffManagement = () => {
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -40,10 +42,12 @@ const StaffManagement = () => {
           ...(filters.isActive !== "" && { isActive: filters.isActive }),
         };
         const response = await staffApi.getStaff(params);
-        setStaff(response.staff);
+        setStaff(response.staff ?? []);
         setPagination(response.pagination);
       } catch (err) {
-        setError(err.response?.data?.message || "Failed to load staff");
+        setError(
+          err.response?.data?.message || err.message || "Failed to load staff"
+        );
         console.error(err);
       } finally {
         setLoading(false);
@@ -61,7 +65,7 @@ const StaffManagement = () => {
     try {
       setLoading(true);
       if (editingStaff) {
-        await staffApi.updateStaff(editingStaff.id, formData);
+        await staffApi.updateStaff(staffIdOf(editingStaff), formData);
         setError("");
         alert("Staff updated successfully");
       } else {
@@ -73,7 +77,7 @@ const StaffManagement = () => {
       setEditingStaff(null);
       await fetchStaff(pagination.page);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to save staff");
+      setError(err.response?.data?.message || err.message || "Failed to save staff");
       console.error(err);
     } finally {
       setLoading(false);
@@ -90,7 +94,7 @@ const StaffManagement = () => {
       setConfirmDialog({ show: false, action: null, staffId: null, message: "" });
       await fetchStaff(pagination.page);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to delete staff");
+      setError(err.response?.data?.message || err.message || "Failed to delete staff");
       console.error(err);
     } finally {
       setLoading(false);
@@ -106,7 +110,7 @@ const StaffManagement = () => {
       setConfirmDialog({ show: false, action: null, staffId: null, message: "" });
       await fetchStaff(pagination.page);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to update status");
+      setError(err.response?.data?.message || err.message || "Failed to update status");
       console.error(err);
     } finally {
       setLoading(false);
@@ -124,7 +128,7 @@ const StaffManagement = () => {
     setConfirmDialog({
       show: true,
       action: "delete",
-      staffId: staffMember.id,
+      staffId: staffIdOf(staffMember),
       message: `Are you sure you want to delete ${staffMember.name}?`,
     });
   };
@@ -134,7 +138,7 @@ const StaffManagement = () => {
     setConfirmDialog({
       show: true,
       action: "toggleStatus",
-      staffId: staffMember.id,
+      staffId: staffIdOf(staffMember),
       message: `Are you sure you want to ${
         staffMember.isActive ? "deactivate" : "activate"
       } ${staffMember.name}?`,

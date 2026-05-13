@@ -10,7 +10,13 @@ export const staffApi = {
   // Get all staff for the admin
   getStaff: async (params = {}) => {
     const { data } = await axiosInstance.get('/staff', { params });
-    return data.data;
+    const payload = data?.data;
+    return (
+      payload ?? {
+        staff: [],
+        pagination: { total: 0, page: 1, limit: 10, pages: 0 },
+      }
+    );
   },
 
   // Get staff by ID

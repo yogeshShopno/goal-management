@@ -1,7 +1,8 @@
 import axios from 'axios';
 
-const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-const baseURL = base.endsWith('/api/v1') ? base : `${base}/api/v1`;
+const rawBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const trimmed = rawBase.replace(/\/+$/, '');
+const baseURL = /\/api\/v1$/i.test(trimmed) ? trimmed : `${trimmed}/api/v1`;
 
 const axiosInstance = axios.create({
   baseURL,
@@ -27,11 +28,11 @@ axiosInstance.interceptors.response.use(
       error.response?.data?.message ||
       error.message ||
       'Something went wrong';
-    return Promise.reject({
-      message,
-      status: error.response?.status,
-      data: error.response?.data,
-    });
+    const wrapped = new Error(message);
+    wrapped.response = error.response;
+    wrapped.status = error.response?.status;
+    wrapped.data = error.response?.data;
+    return Promise.reject(wrapped);
   }
 );
 

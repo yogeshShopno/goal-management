@@ -39,12 +39,11 @@ const authorizeRoles = (...allowedRoles) => (req, _res, next) => {
 const { getPermissionsByRole } = require("../utils/roles");
 
 const requirePermissions = (...requiredPermissions) => (req, _res, next) => {
-  // Use permissions from user object, or fallback to role-based defaults
-  let userPermissions = req.user?.permissions;
-  
-  if (!userPermissions || userPermissions.length === 0) {
-    userPermissions = getPermissionsByRole(req.user?.role);
-  }
+  // Always merge role defaults with stored permissions so outdated or partial
+  // `permissions` arrays in the DB cannot strip access the role should have.
+  const roleDefaults = getPermissionsByRole(req.user?.role);
+  const stored = Array.isArray(req.user?.permissions) ? req.user.permissions : [];
+  const userPermissions = [...new Set([...roleDefaults, ...stored])];
 
   const hasPermission = requiredPermissions.every((permission) =>
     userPermissions.includes(permission)

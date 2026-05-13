@@ -1,7 +1,14 @@
+const mongoose = require("mongoose");
 const Staff = require("../models/Staff");
 const ApiError = require("../utils/ApiError");
 const asyncHandler = require("../utils/asyncHandler");
 const { ROLES, getPermissionsByRole } = require("../utils/roles");
+
+const assertValidStaffId = (id) => {
+  if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid staff id.");
+  }
+};
 
 /**
  * Create a new staff member
@@ -48,7 +55,7 @@ const createStaff = asyncHandler(async (req, res) => {
   res.status(201).json({
     success: true,
     message: "Staff created successfully",
-    data: staff,
+    data: staff.toJSON(),
   });
 });
 
@@ -74,7 +81,7 @@ const getStaff = asyncHandler(async (req, res) => {
   const pageSize = parseInt(limit, 10);
   const skip = (pageNum - 1) * pageSize;
 
-  const [staff, total] = await Promise.all([
+  const [staffDocs, total] = await Promise.all([
     Staff.find(query)
       .select("-password")
       .skip(skip)
@@ -82,6 +89,8 @@ const getStaff = asyncHandler(async (req, res) => {
       .sort({ createdAt: -1 }),
     Staff.countDocuments(query),
   ]);
+
+  const staff = staffDocs.map((doc) => doc.toJSON());
 
   res.status(200).json({
     success: true,
@@ -102,6 +111,7 @@ const getStaff = asyncHandler(async (req, res) => {
  */
 const getStaffById = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  assertValidStaffId(id);
 
   const staff = await Staff.findOne({
     _id: id,
@@ -114,7 +124,7 @@ const getStaffById = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: staff,
+    data: staff.toJSON(),
   });
 });
 
@@ -123,6 +133,7 @@ const getStaffById = asyncHandler(async (req, res) => {
  */
 const updateStaff = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  assertValidStaffId(id);
   const { name, phone, role, isActive } = req.body;
 
   // Check if staff exists and belongs to this admin
@@ -152,7 +163,7 @@ const updateStaff = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     message: "Staff updated successfully",
-    data: staff,
+    data: staff.toJSON(),
   });
 });
 
@@ -161,6 +172,7 @@ const updateStaff = asyncHandler(async (req, res) => {
  */
 const assignRole = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  assertValidStaffId(id);
   const { role } = req.body;
 
   if (!role || !Object.values(ROLES).includes(role)) {
@@ -187,7 +199,7 @@ const assignRole = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     message: `Role assigned successfully`,
-    data: staff,
+    data: staff.toJSON(),
   });
 });
 
@@ -196,6 +208,7 @@ const assignRole = asyncHandler(async (req, res) => {
  */
 const deleteStaff = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  assertValidStaffId(id);
 
   const staff = await Staff.findOneAndDelete({
     _id: id,
@@ -217,6 +230,7 @@ const deleteStaff = asyncHandler(async (req, res) => {
  */
 const toggleStaffStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  assertValidStaffId(id);
 
   const staff = await Staff.findOne({
     _id: id,
@@ -233,7 +247,7 @@ const toggleStaffStatus = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     message: `Staff ${staff.isActive ? "activated" : "deactivated"} successfully`,
-    data: staff,
+    data: staff.toJSON(),
   });
 });
 

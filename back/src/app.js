@@ -15,6 +15,10 @@ const { errorHandler, notFound } = require("./middlewares/errorMiddleware");
 
 const app = express();
 
+if (env.nodeEnv === "production") {
+  app.set("trust proxy", 1);
+}
+
 app.use(helmet());
 app.use(
   cors({
@@ -31,9 +35,10 @@ app.use(
   "/api",
   rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 200,
+    limit: 2000,
     standardHeaders: true,
     legacyHeaders: false,
+    skipSuccessfulRequests: true,
   })
 );
 

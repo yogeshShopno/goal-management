@@ -11,10 +11,11 @@ export const useStaff = () => {
       setLoading(true);
       setError(null);
       const response = await staffApi.getStaff(params);
-      setStaff(response.staff);
+      setStaff(response.staff ?? []);
       return response;
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Failed to fetch staff';
+      const errorMessage =
+        err.response?.data?.message || err.message || 'Failed to fetch staff';
       setError(errorMessage);
       console.error('Error fetching staff:', err);
       throw err;
@@ -31,7 +32,8 @@ export const useStaff = () => {
       setStaff((prev) => [...prev, response]);
       return response;
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Failed to create staff';
+      const errorMessage =
+        err.response?.data?.message || err.message || 'Failed to create staff';
       setError(errorMessage);
       console.error('Error creating staff:', err);
       throw err;
@@ -46,11 +48,12 @@ export const useStaff = () => {
       setError(null);
       const response = await staffApi.updateStaff(id, staffData);
       setStaff((prev) =>
-        prev.map((s) => (s.id === id ? response : s))
+        prev.map((s) => (s.id === id || String(s._id) === String(id) ? response : s))
       );
       return response;
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Failed to update staff';
+      const errorMessage =
+        err.response?.data?.message || err.message || 'Failed to update staff';
       setError(errorMessage);
       console.error('Error updating staff:', err);
       throw err;
@@ -64,9 +67,10 @@ export const useStaff = () => {
       setLoading(true);
       setError(null);
       await staffApi.deleteStaff(id);
-      setStaff((prev) => prev.filter((s) => s.id !== id));
+      setStaff((prev) => prev.filter((s) => s.id !== id && String(s._id) !== String(id)));
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Failed to delete staff';
+      const errorMessage =
+        err.response?.data?.message || err.message || 'Failed to delete staff';
       setError(errorMessage);
       console.error('Error deleting staff:', err);
       throw err;
@@ -81,11 +85,12 @@ export const useStaff = () => {
       setError(null);
       const response = await staffApi.assignRole(id, role);
       setStaff((prev) =>
-        prev.map((s) => (s.id === id ? response.data : s))
+        prev.map((s) => (s.id === id || String(s._id) === String(id) ? response : s))
       );
-      return response.data;
+      return response;
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Failed to assign role';
+      const errorMessage =
+        err.response?.data?.message || err.message || 'Failed to assign role';
       setError(errorMessage);
       console.error('Error assigning role:', err);
       throw err;
@@ -100,11 +105,12 @@ export const useStaff = () => {
       setError(null);
       const response = await staffApi.toggleStaffStatus(id);
       setStaff((prev) =>
-        prev.map((s) => (s.id === id ? response.data : s))
+        prev.map((s) => (s.id === id || String(s._id) === String(id) ? response : s))
       );
-      return response.data;
+      return response;
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Failed to toggle status';
+      const errorMessage =
+        err.response?.data?.message || err.message || 'Failed to toggle status';
       setError(errorMessage);
       console.error('Error toggling status:', err);
       throw err;

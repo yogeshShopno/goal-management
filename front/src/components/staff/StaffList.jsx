@@ -40,7 +40,7 @@ const StaffList = ({ staff, onEdit, onDelete, onToggleStatus }) => {
           <tbody>
             {staff.map((member) => (
               <tr
-                key={member.id}
+                key={member.id ?? member._id}
                 className={`border-b border-[var(--color-border)] transition-colors ${
                   member.isActive
                     ? "hover:bg-[var(--color-primary-light)]"
