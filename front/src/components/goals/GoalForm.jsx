@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Modal from '../common/Modal';
 import { useAuth } from '../../hooks/useAuth';
 import { apiHandler } from '../../utils/apiHandler';
-import { fetchUsers } from '../../api/userApi';
+import { fetchUsersAndStaff } from '../../api/userApi';
 import { GOAL_STATUS, PRIORITY } from '../../constants';
 
 const empty = {
@@ -24,7 +24,7 @@ export default function GoalForm({ open, onClose, initialGoal, onSave }) {
 
   useEffect(() => {
     if (!open || !isAdmin) return;
-    apiHandler(() => fetchUsers(), { onSuccess: (data) => setUsers(data || []) });
+    apiHandler(() => fetchUsersAndStaff(), { onSuccess: (data) => setUsers(data || []) });
   }, [open, isAdmin]);
 
   useEffect(() => {
@@ -71,13 +71,22 @@ export default function GoalForm({ open, onClose, initialGoal, onSave }) {
   const submit = () => {
     setAttempted(true);
     if (!form.name.trim() || !form.startDate || !form.deadline || !form.ownerId || !form.responsibleId) return;
+    
+    // Find owners to determine if they're staff or users
+    const owner = users.find(u => u.id === form.ownerId);
+    const responsible = users.find(u => u.id === form.responsibleId);
+    const isOwnerStaff = owner?.assignmentType === 'staff';
+    const isResponsibleStaff = responsible?.assignmentType === 'staff';
+    
     onSave?.({
       name: form.name.trim(),
       description: form.description.trim(),
       startDate: form.startDate,
       deadline: form.deadline,
-      ownerId: form.ownerId || null,
-      responsibleId: form.responsibleId || null,
+      ownerId: isOwnerStaff ? null : (form.ownerId || null),
+      ownerStaffId: isOwnerStaff ? form.ownerId : null,
+      responsibleId: isResponsibleStaff ? null : (form.responsibleId || null),
+      responsibleStaffId: isResponsibleStaff ? form.responsibleId : null,
       status: form.status,
       priority: form.priority,
     });
@@ -157,7 +166,7 @@ export default function GoalForm({ open, onClose, initialGoal, onSave }) {
               <option value="">Select user</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
-                  {u.name}
+                  {u.name} {u.assignmentType === 'staff' ? '(Staff)' : ''}
                 </option>
               ))}
             </select>
@@ -172,7 +181,7 @@ export default function GoalForm({ open, onClose, initialGoal, onSave }) {
               <option value="">Select user</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
-                  {u.name}
+                  {u.name} {u.assignmentType === 'staff' ? '(Staff)' : ''}
                 </option>
               ))}
             </select>

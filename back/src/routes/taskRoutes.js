@@ -6,6 +6,7 @@ const {
   updateTask,
   deleteTask,
   reorderTasks,
+  updateNumericProgress,
 } = require("../controllers/taskController");
 
 const buildTaskRoutes = (env) => {
@@ -28,6 +29,9 @@ const buildTaskRoutes = (env) => {
 
   // PUT /tasks/:id - Update a task (requires manage_tasks permission)
   router.put("/:id", auth, requirePermissions("manage_tasks"), updateTask);
+
+  // PATCH /tasks/:id/progress - Update numeric task progress (requires manage_tasks OR assigned to task)
+  router.patch("/:id/progress", auth, requirePermissions("manage_tasks"), updateNumericProgress);
 
   // DELETE /tasks/:id - Delete a task (requires manage_tasks permission)
   router.delete("/:id", auth, requirePermissions("manage_tasks"), deleteTask);

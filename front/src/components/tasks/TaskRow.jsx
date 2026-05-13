@@ -11,11 +11,13 @@ import {
   Pencil,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import toast from 'react-hot-toast';
 import { useAppContext } from '../../context/AppContext';
 import { useTasks } from '../../hooks/useTasks';
 import { useAuth } from '../../hooks/useAuth';
 import { TASK_STATUS, TASK_TYPE } from '../../constants';
 import { userDisplayName } from '../../utils/userDisplay';
+import { updateNumericProgress } from '../../api/taskApi';
 import PriorityBadge from '../common/PriorityBadge';
 import TaskNotes from './TaskNotes';
 import TaskForm from './TaskForm';
@@ -48,8 +50,11 @@ function TaskRowInner({
   }, [isNumeric, task.id, task.currentValue]);
 
   const assignedId = task.assignedUserId?.id || task.assignedUserId;
+  const assignedStaffId = task.assignedStaffId?.id || task.assignedStaffId;
   const canDelete = isAdmin || assignedId === currentUser.id;
   const canNotes = isAdmin || assignedId === currentUser.id;
+  const canUpdateNumeric = isAdmin || assignedId === currentUser.id || assignedStaffId === currentUser.id;
+  const [updatingProgress, setUpdatingProgress] = useState(false);
 
   const move = (dir) => {
     if (!enableSort) return;
@@ -61,22 +66,43 @@ function TaskRowInner({
 
   const done = task.status === TASK_STATUS.COMPLETED;
 
-  const persistNumericCount = () => {
-    if (!isNumeric) return;
+  const persistNumericCount = async () => {
+    if (!isNumeric || !canUpdateNumeric || done) return;
     const n = Math.max(0, Number.parseFloat(countDraft));
     const safe = Number.isFinite(n) ? Math.floor(n) : task.currentValue ?? 0;
     setCountDraft(String(safe));
     if (safe !== (task.currentValue ?? 0)) {
-      editTask(task.id, { ...task, currentValue: safe });
+      try {
+        setUpdatingProgress(true);
+        await updateNumericProgress(task.id, 'set', safe);
+        // Update local state via editTask
+        editTask(task.id, { ...task, currentValue: safe });
+        toast.success('Progress updated');
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Failed to update progress');
+        setCountDraft(String(task.currentValue ?? 0));
+      } finally {
+        setUpdatingProgress(false);
+      }
     }
   };
 
-  const bumpCount = (delta) => {
-    if (!isNumeric) return;
+  const bumpCount = async (delta) => {
+    if (!isNumeric || !canUpdateNumeric || done) return;
     const base = task.currentValue ?? 0;
     const n = Math.max(0, base + delta);
     setCountDraft(String(n));
-    editTask(task.id, { ...task, currentValue: n });
+    try {
+      setUpdatingProgress(true);
+      const op = delta > 0 ? 'increment' : 'decrement';
+      await updateNumericProgress(task.id, op);
+      editTask(task.id, { ...task, currentValue: n });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update progress');
+      setCountDraft(String(task.currentValue ?? 0));
+    } finally {
+      setUpdatingProgress(false);
+    }
   };
 
   return (
@@ -102,31 +128,74 @@ function TaskRowInner({
           <span className="hidden w-5 md:block" aria-hidden />
         )}
         {isNumeric ? (
-          <div className="mt-0.5 flex shrink-0 flex-col items-stretch gap-1 sm:flex-row sm:items-center">
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => bumpCount(-1)}
-                className="rounded border border-[var(--color-border)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
-                aria-label="Decrease count"
-              >
-                −
-              </button>
-        
-              <button
-                type="button"
-                onClick={() => bumpCount(1)}
-                className="rounded border border-[var(--color-border)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
-                aria-label="Increase count"
-              >
-                +
-              </button>
+          canUpdateNumeric ? (
+            <div className="mt-0.5 flex shrink-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => bumpCount(-1)}
+                  disabled={done || updatingProgress}
+                  className={`rounded border px-2 py-0.5 text-xs font-medium transition-colors ${
+                    done || updatingProgress
+                      ? 'border-[var(--color-border)] text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                      : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]'
+                  }`}
+                  aria-label="Decrease count"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min="0"
+                  value={countDraft}
+                  onChange={(e) => setCountDraft(e.target.value)}
+                  onBlur={persistNumericCount}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') persistNumericCount();
+                  }}
+                  disabled={done || updatingProgress}
+                  placeholder="0"
+                  className={`w-12 rounded border text-center text-xs font-medium outline-none transition-colors ${
+                    done || updatingProgress
+                      ? 'border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-muted)] cursor-not-allowed'
+                      : 'border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20'
+                  }`}
+                  aria-label="Current progress value"
+                />
+                <button
+                  type="button"
+                  onClick={() => bumpCount(1)}
+                  disabled={done || updatingProgress}
+                  className={`rounded border px-2 py-0.5 text-xs font-medium transition-colors ${
+                    done || updatingProgress
+                      ? 'border-[var(--color-border)] text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                      : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]'
+                  }`}
+                  aria-label="Increase count"
+                >
+                  +
+                </button>
+              </div>
+              <span className="text-center text-[11px] text-[var(--color-text-muted)] sm:text-left">
+                / {task.targetValue}
+                {task.targetType ? ` ${task.targetType}` : ''}
+              </span>
+              {updatingProgress && (
+                <span className="text-[10px] text-[var(--color-text-muted)]">updating...</span>
+              )}
+              {done && (
+                <span className="text-[10px] font-medium text-emerald-600">Completed</span>
+              )}
             </div>
-            <span className="text-center text-[11px] text-[var(--color-text-muted)] sm:text-left">
-              / {task.targetValue}
-              {task.targetType ? ` ${task.targetType}` : ''}
-            </span>
-          </div>
+          ) : (
+            <div className="mt-0.5 flex items-center gap-2">
+              <span className="text-center text-[11px] text-[var(--color-text-muted)]">
+                {task.currentValue ?? 0} / {task.targetValue}
+                {task.targetType ? ` ${task.targetType}` : ''}
+              </span>
+              <span className="text-[10px] text-[var(--color-danger)] italic">No permission</span>
+            </div>
+          )
         ) : (
           <input
             type="checkbox"

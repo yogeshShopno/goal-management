@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Modal from '../common/Modal';
 import { apiHandler } from '../../utils/apiHandler';
-import { fetchUsers } from '../../api/userApi';
+import { fetchUsersAndStaff } from '../../api/userApi';
 import { PRIORITY, TASK_STATUS, TASK_TYPE } from '../../constants';
 
 const empty = {
@@ -27,7 +27,7 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
 
   useEffect(() => {
     if (!open) return;
-    apiHandler(() => fetchUsers(), { onSuccess: (data) => setUsers(data || []) });
+    apiHandler(() => fetchUsersAndStaff(), { onSuccess: (data) => setUsers(data || []) });
   }, [open]);
 
   useEffect(() => {
@@ -97,12 +97,18 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
       if (!Number.isFinite(cv) || cv < 0) return;
     }
     const isNumeric = form.taskType === TASK_TYPE.NUMERIC;
+    
+    // Find the assigned user/staff to determine which field to populate
+    const assignedPerson = users.find(u => u.id === form.assignedUserId);
+    const isStaff = assignedPerson?.assignmentType === 'staff';
+    
     const payload = {
       name: form.name.trim(),
       description: form.description.trim(),
       startDate: form.startDate,
       deadline: form.deadline,
-      assignedUserId: form.assignedUserId || null,
+      assignedUserId: isStaff ? null : (form.assignedUserId || null),
+      assignedStaffId: isStaff ? form.assignedUserId : null,
       assignedTeam: form.assignedTeam.trim(),
       priority: form.priority,
       status: form.status,
@@ -262,10 +268,10 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
             value={form.assignedUserId}
             onChange={(e) => setForm((f) => ({ ...f, assignedUserId: e.target.value }))}
           >
-            <option value="">Select user</option>
+            <option value="">Select user or staff</option>
             {users.map((u) => (
               <option key={u.id} value={u.id}>
-                {u.name}
+                {u.name} {u.assignmentType === 'staff' ? '(Staff)' : ''}
               </option>
             ))}
           </select>

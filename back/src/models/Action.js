@@ -31,10 +31,20 @@ const actionSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    ownerStaffId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Staff",
+    },
     assignedUserIds: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
+      },
+    ],
+    assignedStaffIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Staff",
       },
     ],
     priority: {

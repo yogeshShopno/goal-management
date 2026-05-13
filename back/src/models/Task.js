@@ -30,6 +30,10 @@ const taskSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    assignedStaffId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Staff",
+    },
     assignedTeam: {
       type: String,
       trim: true,
@@ -95,6 +99,7 @@ const taskSchema = new mongoose.Schema(
 // Compound indexes for efficient queries
 taskSchema.index({ actionId: 1, order: 1 });
 taskSchema.index({ assignedUserId: 1 });
+taskSchema.index({ assignedStaffId: 1 });
 taskSchema.index({ status: 1 });
 taskSchema.index({ actionId: 1, status: 1 });
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Modal from '../common/Modal';
 import { apiHandler } from '../../utils/apiHandler';
-import { fetchUsers } from '../../api/userApi';
+import { fetchUsersAndStaff } from '../../api/userApi';
 import { ACTION_STATUS, PRIORITY } from '../../constants';
 
 const empty = {
@@ -11,6 +11,7 @@ const empty = {
   deadline: '',
   ownerId: '',
   assignedUserIds: [],
+  assignedStaffIds: [],
   priority: PRIORITY.MEDIUM,
   status: ACTION_STATUS.PENDING,
 };
@@ -22,7 +23,7 @@ export default function ActionForm({ open, onClose, goalId, initialAction, onCre
 
   useEffect(() => {
     if (!open) return;
-    apiHandler(() => fetchUsers(), { onSuccess: (data) => setUsers(data || []) });
+    apiHandler(() => fetchUsersAndStaff(), { onSuccess: (data) => setUsers(data || []) });
   }, [open]);
 
   useEffect(() => {
@@ -34,8 +35,9 @@ export default function ActionForm({ open, onClose, goalId, initialAction, onCre
         description: initialAction.description || '',
         startDate: initialAction.startDate || '',
         deadline: initialAction.deadline || '',
-        ownerId: initialAction.ownerId?.id || initialAction.ownerId || '',
+        ownerId: initialAction.ownerId?.id || initialAction.ownerId || initialAction.ownerStaffId || '',
         assignedUserIds: (initialAction.assignedUserIds || []).map((u) => u.id || u),
+        assignedStaffIds: (initialAction.assignedStaffIds || []).map((s) => s.id || s),
         priority: initialAction.priority || PRIORITY.MEDIUM,
         status: initialAction.status || ACTION_STATUS.PENDING,
       });
@@ -63,25 +65,33 @@ export default function ActionForm({ open, onClose, goalId, initialAction, onCre
         : 'border-[var(--color-border)]'
     }`;
 
-  const toggleAssignee = (id) => {
+  const toggleAssignee = (id, isStaff = false) => {
     setForm((f) => {
-      const set = new Set(f.assignedUserIds);
+      const key = isStaff ? 'assignedStaffIds' : 'assignedUserIds';
+      const set = new Set(f[key]);
       if (set.has(id)) set.delete(id);
       else set.add(id);
-      return { ...f, assignedUserIds: [...set] };
+      return { ...f, [key]: [...set] };
     });
   };
 
   const submit = () => {
     setAttempted(true);
     if (!form.name.trim() || !form.startDate || !form.deadline || !form.ownerId) return;
+    
+    // Find the owner to determine if it's staff or user
+    const owner = users.find(u => u.id === form.ownerId);
+    const isOwnerStaff = owner?.assignmentType === 'staff';
+    
     const payload = {
       name: form.name.trim(),
       description: form.description.trim(),
       startDate: form.startDate,
       deadline: form.deadline,
-      ownerId: form.ownerId || null,
+      ownerId: isOwnerStaff ? null : (form.ownerId || null),
+      ownerStaffId: isOwnerStaff ? form.ownerId : null,
       assignedUserIds: form.assignedUserIds,
+      assignedStaffIds: form.assignedStaffIds,
       priority: form.priority,
       status: form.status,
     };
@@ -162,7 +172,7 @@ export default function ActionForm({ open, onClose, goalId, initialAction, onCre
             <option value="">Select user</option>
             {users.map((u) => (
               <option key={u.id} value={u.id}>
-                {u.name}
+                {u.name} {u.assignmentType === 'staff' ? '(Staff)' : ''}
               </option>
             ))}
           </select>
@@ -170,17 +180,23 @@ export default function ActionForm({ open, onClose, goalId, initialAction, onCre
         <div>
           <p className="text-sm font-medium text-[var(--color-text)]">Assigned users</p>
           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {users.map((u) => (
-              <label key={u.id} className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
-                <input
-                  type="checkbox"
-                  checked={form.assignedUserIds.includes(u.id)}
-                  onChange={() => toggleAssignee(u.id)}
-                  className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)]"
-                />
-                {u.name}
-              </label>
-            ))}
+            {users.map((u) => {
+              const isStaff = u.assignmentType === 'staff';
+              const isChecked = isStaff
+                ? form.assignedStaffIds.includes(u.id)
+                : form.assignedUserIds.includes(u.id);
+              return (
+                <label key={u.id} className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => toggleAssignee(u.id, isStaff)}
+                    className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)]"
+                  />
+                  {u.name} {isStaff ? '(Staff)' : ''}
+                </label>
+              );
+            })}
           </div>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

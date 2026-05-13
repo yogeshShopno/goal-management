@@ -36,6 +36,7 @@ const fetchTasks = asyncHandler(async (req, res) => {
   const tasks = await Task.find(query)
     .populate("actionId", "name")
     .populate("assignedUserId", "name email role")
+    .populate("assignedStaffId", "name email role")
     .sort({ order: 1, createdAt: -1 })
     .exec();
 
@@ -52,6 +53,7 @@ const fetchTaskById = asyncHandler(async (req, res) => {
   const task = await Task.findById(id)
     .populate("actionId", "name")
     .populate("assignedUserId", "name email role")
+    .populate("assignedStaffId", "name email role")
     .exec();
 
   if (!task) {
@@ -73,6 +75,7 @@ const createTask = asyncHandler(async (req, res) => {
     startDate,
     deadline,
     assignedUserId,
+    assignedStaffId,
     assignedTeam,
     status,
     priority,
@@ -153,6 +156,7 @@ const createTask = asyncHandler(async (req, res) => {
     startDate,
     deadline,
     assignedUserId,
+    assignedStaffId,
     assignedTeam,
     status,
     priority,
@@ -167,6 +171,7 @@ const createTask = asyncHandler(async (req, res) => {
   const populatedTask = await task.populate([
     { path: "actionId", select: "name" },
     { path: "assignedUserId", select: "name email role" },
+    { path: "assignedStaffId", select: "name email role" },
   ]);
 
   res.status(201).json({
@@ -185,6 +190,7 @@ const updateTask = asyncHandler(async (req, res) => {
     startDate,
     deadline,
     assignedUserId,
+    assignedStaffId,
     assignedTeam,
     status,
     priority,
@@ -217,6 +223,7 @@ const updateTask = asyncHandler(async (req, res) => {
   if (startDate) task.startDate = startDate;
   if (deadline) task.deadline = deadline;
   if (assignedUserId !== undefined) task.assignedUserId = assignedUserId;
+  if (assignedStaffId !== undefined) task.assignedStaffId = assignedStaffId;
   if (assignedTeam !== undefined) task.assignedTeam = assignedTeam;
   if (status) {
     task.status = status;
@@ -285,6 +292,7 @@ const updateTask = asyncHandler(async (req, res) => {
   const populatedTask = await updatedTask.populate([
     { path: "actionId", select: "name" },
     { path: "assignedUserId", select: "name email role" },
+    { path: "assignedStaffId", select: "name email role" },
   ]);
 
   res.status(200).json({
@@ -335,6 +343,65 @@ const reorderTasks = asyncHandler(async (req, res) => {
   });
 });
 
+// Update numeric task progress
+const updateNumericProgress = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { currentValue, operation } = req.body;
+
+  const task = await Task.findById(id).populate([
+    { path: "actionId", select: "name" },
+    { path: "assignedUserId", select: "name email" },
+    { path: "assignedStaffId", select: "name email" },
+  ]);
+
+  if (!task) {
+    throw new ApiError(404, "Task not found");
+  }
+
+  if (task.taskType !== "numeric") {
+    throw new ApiError(400, "This task is not a numeric task");
+  }
+
+  // Permission check: only admin, assigned user, or assigned staff can update
+  const assignedUserId = task.assignedUserId?._id?.toString() || task.assignedUserId?.toString();
+  const assignedStaffId = task.assignedStaffId?._id?.toString() || task.assignedStaffId?.toString();
+  const userId = req.user._id.toString();
+  
+  const isAdmin = req.user.role === "admin";
+  const isAssignedUser = assignedUserId === userId;
+  const isAssignedStaff = assignedStaffId === userId;
+
+  if (!isAdmin && !isAssignedUser && !isAssignedStaff) {
+    throw new ApiError(403, "You don't have permission to update this task");
+  }
+
+  let newValue = task.currentValue ?? 0;
+
+  if (operation === "increment") {
+    newValue += 1;
+  } else if (operation === "decrement") {
+    newValue = Math.max(0, newValue - 1);
+  } else if (operation === "set" && typeof currentValue === "number") {
+    newValue = Math.max(0, Math.floor(currentValue));
+  } else {
+    throw new ApiError(400, "Invalid operation. Use 'increment', 'decrement', or 'set'");
+  }
+
+  // Auto-complete if target reached
+  task.currentValue = newValue;
+  if (task.targetValue && newValue >= task.targetValue && task.status !== "completed") {
+    task.status = "completed";
+    task.completedAt = new Date();
+  }
+
+  await task.save();
+
+  res.status(200).json({
+    success: true,
+    data: task,
+  });
+});
+
 module.exports = {
   fetchTasks,
   fetchTaskById,
@@ -342,4 +409,5 @@ module.exports = {
   updateTask,
   deleteTask,
   reorderTasks,
+  updateNumericProgress,
 };

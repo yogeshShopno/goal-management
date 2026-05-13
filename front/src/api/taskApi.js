@@ -35,3 +35,12 @@ export async function reorderTasksForAction(actionId, orderedIds) {
   const { data } = await axiosInstance.put(`/tasks/reorder`, { actionId, taskIds: orderedIds });
   return data;
 }
+
+/** Update numeric task progress - increment, decrement, or set value */
+export async function updateNumericProgress(taskId, operation, currentValue = null) {
+  const { data } = await axiosInstance.patch(`/tasks/${taskId}/progress`, {
+    operation, // 'increment', 'decrement', or 'set'
+    currentValue, // required for 'set' operation
+  });
+  return data.data;
+}

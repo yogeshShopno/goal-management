@@ -26,10 +26,18 @@ const goalSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    ownerStaffId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Staff",
+    },
     responsibleId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    responsibleStaffId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Staff",
     },
     status: {
       type: String,
