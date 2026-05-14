@@ -15,7 +15,7 @@ import ConfirmDialog from '../common/ConfirmDialog';
 import UpdatesSection from '../updates/UpdatesSection';
 
 export default function ActionCard({ action, restrictUser, currentUserId }) {
-  const { state, editAction, removeAction } = useAppContext();
+  const { state, editAction, removeAction, addActionUpdate } = useAppContext();
   const { currentUser, isAdmin } = useAuth();
   const [expanded, setExpanded] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -146,8 +146,7 @@ export default function ActionCard({ action, restrictUser, currentUserId }) {
           />
           <UpdatesSection
             item={action}
-            type="action"
-            onAddUpdate={(payload) => state.addActionUpdate ? state.addActionUpdate(action.id, payload) : useAppContext().addActionUpdate(action.id, payload)}
+            onAddUpdate={(payload) => addActionUpdate(action.id, payload)}
           />
         </div>
       )}

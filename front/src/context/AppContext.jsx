@@ -174,7 +174,7 @@ export function AppProvider({ children }) {
   }, []);
 
   const addActionUpdate = useCallback(async (id, payload) => {
-    await apiHandler(() => addActionUpdateApi(id, payload), {
+    return await apiHandler(() => addActionUpdateApi(id, payload), {
       successMsg: 'Update added',
       errorMsg: 'Failed to add update',
       onSuccess: (data) => dispatch({ type: 'UPDATE_ACTION', payload: data }),
@@ -209,7 +209,7 @@ export function AppProvider({ children }) {
   }, []);
 
   const addTaskUpdate = useCallback(async (id, payload) => {
-    await apiHandler(() => addTaskUpdateApi(id, payload), {
+    return await apiHandler(() => addTaskUpdateApi(id, payload), {
       successMsg: 'Update added',
       errorMsg: 'Failed to add update',
       onSuccess: (data) => dispatch({ type: 'UPDATE_TASK', payload: data }),

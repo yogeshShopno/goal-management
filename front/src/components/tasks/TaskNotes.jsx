@@ -4,32 +4,37 @@ import { useTasks } from '../../hooks/useTasks';
 
 export default function TaskNotes({ task, expanded }) {
   const { isAdmin, currentUser } = useAuth();
-  const { editTask } = useTasks(task.actionId);
-  const canView = isAdmin || task.assignedUserId === currentUser.id;
+  const { editTask } = useTasks(task.actionId?.id || task.actionId);
+
+  // Support populated assignedUserId objects (e.g. { id: '...' }) or bare string IDs
+  const assignedId = task.assignedUserId?.id || task.assignedUserId?._id || task.assignedUserId;
+  const canView = isAdmin || assignedId === currentUser.id;
+
   const [draft, setDraft] = useState(task.notes || '');
 
   useEffect(() => {
     setDraft(task.notes || '');
   }, [task.id, task.notes]);
 
-  if (!canView) return null;
+  // Only render when expanded and authorized
+  if (!expanded || !canView) return null;
 
   const onBlurSave = async () => {
     if (draft === (task.notes || '')) return;
     await editTask(task.id, { ...task, notes: draft });
   };
 
-  if (!expanded) return null;
-
   return (
-    <div className="mt-2 rounded-md border border-[var(--color-border)] bg-[var(--color-card)] p-3">
-      <div className="mb-2 text-xs font-semibold text-[var(--color-text-muted)]">Notes & details</div>
+    <div>
+      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+        Notes &amp; details
+      </div>
       <div className="space-y-2">
         {task.description ? (
           <p className="text-sm text-[var(--color-text-muted)]">{task.description}</p>
         ) : null}
         <textarea
-          className="min-h-[96px] w-full rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] p-2 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+          className="min-h-[80px] w-full rounded-lg border border-[var(--color-border)] bg-white p-2.5 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={onBlurSave}
