@@ -20,13 +20,13 @@ const empty = {
 
 export default function ActionForm({ open, onClose, goalId, initialAction, onCreate, onSave }) {
   const { currentUser } = useAuth();
-  const [users, setUsers] = useState([]);
+  const [staff, setStaff] = useState([]);
   const [form, setForm] = useState(empty);
   const [attempted, setAttempted] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    apiHandler(() => fetchUsersAndStaff(), { onSuccess: (data) => setUsers(data || []) });
+    apiHandler(() => fetchUsersAndStaff(), { onSuccess: (data) => setStaff(data || []) });
   }, [open]);
 
   useEffect(() => {
@@ -83,7 +83,7 @@ export default function ActionForm({ open, onClose, goalId, initialAction, onCre
     if (!form.name.trim() || !form.startDate || !form.deadline || !form.ownerId) return;
     
     // Find the owner to determine if it's staff or user
-    const owner = users.find(u => u.id === form.ownerId);
+    const owner = staff.find(u => u.id === form.ownerId);
     const isOwnerStaff = owner?.assignmentType === 'staff';
     
     const payload = {
@@ -174,7 +174,7 @@ export default function ActionForm({ open, onClose, goalId, initialAction, onCre
               onChange={(e) => setForm((f) => ({ ...f, ownerId: e.target.value }))}
             >
               <option value="">Select owner</option>
-              {users.map((u) => (
+              {staff.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name}
                 </option>
