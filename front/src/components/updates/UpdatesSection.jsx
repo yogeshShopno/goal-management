@@ -60,7 +60,7 @@ export default function UpdatesSection({ item, onAddUpdate }) {
       <div className="flex items-center justify-between mb-3">
         <h5 className="flex items-center gap-2 text-sm font-bold text-[var(--color-text)]">
           <Activity className="h-4 w-4 text-[var(--color-primary)]" />
-          Updates &amp; Logs
+          Updates
         </h5>
         {!isAdding && (
           <button

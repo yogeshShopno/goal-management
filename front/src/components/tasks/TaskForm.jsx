@@ -21,13 +21,13 @@ const empty = {
 };
 
 export default function TaskForm({ open, onClose, actionId, initialTask, onCreate, onSave }) {
-  const [users, setUsers] = useState([]);
+  const [staff, setStaff] = useState([]);
   const [form, setForm] = useState(empty);
   const [attempted, setAttempted] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    apiHandler(() => fetchUsersAndStaff(), { onSuccess: (data) => setUsers(data || []) });
+    apiHandler(() => fetchUsersAndStaff(), { onSuccess: (data) => setStaff(data || []) });
   }, [open]);
 
   useEffect(() => {
@@ -99,7 +99,7 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
     const isNumeric = form.taskType === TASK_TYPE.NUMERIC;
     
     // Find the assigned user/staff to determine which field to populate
-    const assignedPerson = users.find(u => u.id === form.assignedUserId);
+    const assignedPerson = staff.find(u => u.id === form.assignedUserId);
     const isStaff = assignedPerson?.assignmentType === 'staff';
     
     const resolvedActionId =
@@ -215,7 +215,7 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
           </div>
         </div>
         {form.taskType === TASK_TYPE.NUMERIC ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="text-sm font-medium text-[var(--color-text)]">Target value *</label>
               <input
@@ -271,7 +271,7 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
               onChange={(e) => setForm((f) => ({ ...f, assignedUserId: e.target.value }))}
             >
               <option value="">Unassigned</option>
-              {users.map((u) => (
+              {staff.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name}
                 </option>
