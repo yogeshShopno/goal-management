@@ -164,10 +164,45 @@ const deleteAction = asyncHandler(async (req, res) => {
   });
 });
 
+// Add an update to an action
+const addActionUpdate = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { assignedUserId, assignedStaffId, notes, actionText } = req.body;
+
+  const action = await Action.findById(id);
+  if (!action) {
+    throw new ApiError(404, "Action not found");
+  }
+
+  action.updates.push({
+    assignedUserId,
+    assignedStaffId,
+    notes,
+    actionText,
+  });
+
+  const updatedAction = await action.save();
+  const populatedAction = await updatedAction.populate([
+    { path: "goalId", select: "name" },
+    { path: "ownerId", select: "name email role" },
+    { path: "ownerStaffId", select: "name email role" },
+    { path: "assignedUserIds", select: "name email role" },
+    { path: "assignedStaffIds", select: "name email role" },
+    { path: "updates.assignedUserId", select: "name email role" },
+    { path: "updates.assignedStaffId", select: "name email role" },
+  ]);
+
+  res.status(201).json({
+    success: true,
+    data: populatedAction.toJSON ? populatedAction.toJSON() : populatedAction,
+  });
+});
+
 module.exports = {
   fetchActions,
   fetchActionById,
   createAction,
   updateAction,
   deleteAction,
+  addActionUpdate,
 };

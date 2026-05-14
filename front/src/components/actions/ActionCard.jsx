@@ -12,6 +12,7 @@ import PriorityBadge from '../common/PriorityBadge';
 import TaskList from '../tasks/TaskList';
 import ActionForm from './ActionForm';
 import ConfirmDialog from '../common/ConfirmDialog';
+import UpdatesSection from '../updates/UpdatesSection';
 
 export default function ActionCard({ action, restrictUser, currentUserId }) {
   const { state, editAction, removeAction } = useAppContext();
@@ -142,6 +143,11 @@ export default function ActionCard({ action, restrictUser, currentUserId }) {
             showAddButton={canAddTask}
             restrictUser={restrictUser}
             currentUserId={currentUserId}
+          />
+          <UpdatesSection
+            item={action}
+            type="action"
+            onAddUpdate={(payload) => state.addActionUpdate ? state.addActionUpdate(action.id, payload) : useAppContext().addActionUpdate(action.id, payload)}
           />
         </div>
       )}

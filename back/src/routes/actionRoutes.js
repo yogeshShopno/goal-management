@@ -5,6 +5,7 @@ const {
   createAction,
   updateAction,
   deleteAction,
+  addActionUpdate,
 } = require("../controllers/actionController");
 
 const buildActionRoutes = (env) => {
@@ -27,6 +28,9 @@ const buildActionRoutes = (env) => {
 
   // DELETE /actions/:id - Delete an action (requires manage_actions permission)
   router.delete("/:id", auth, requirePermissions("manage_actions"), deleteAction);
+
+  // POST /actions/:id/updates - Add an update to an action
+  router.post("/:id/updates", auth, addActionUpdate);
 
   return router;
 };

@@ -24,3 +24,8 @@ export async function deleteAction(id) {
   const { data } = await axiosInstance.delete(`/actions/${id}`);
   return data;
 }
+
+export async function addActionUpdate(id, payload) {
+  const { data } = await axiosInstance.post(`/actions/${id}/updates`, payload);
+  return data.data;
+}

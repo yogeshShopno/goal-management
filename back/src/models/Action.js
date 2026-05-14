@@ -56,6 +56,32 @@ const actionSchema = new mongoose.Schema(
       enum: ["todo", "in_progress", "completed", "pending"],
       default: "todo",
     },
+    updates: [
+      {
+        assignedUserId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        assignedStaffId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Staff",
+        },
+        notes: {
+          type: String,
+          trim: true,
+          maxlength: 2000,
+        },
+        actionText: {
+          type: String,
+          trim: true,
+          maxlength: 1000,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

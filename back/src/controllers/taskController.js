@@ -420,6 +420,39 @@ const updateNumericProgress = asyncHandler(async (req, res) => {
   });
 });
 
+// Add an update to a task
+const addTaskUpdate = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { assignedUserId, assignedStaffId, notes, actionText, voiceNoteUrl } = req.body;
+
+  const task = await Task.findById(id);
+  if (!task) {
+    throw new ApiError(404, "Task not found");
+  }
+
+  task.updates.push({
+    assignedUserId,
+    assignedStaffId,
+    notes,
+    actionText,
+    voiceNoteUrl,
+  });
+
+  const updatedTask = await task.save();
+  const populatedTask = await updatedTask.populate([
+    { path: "actionId", select: "name" },
+    { path: "assignedUserId", select: "name email role" },
+    { path: "assignedStaffId", select: "name email role" },
+    { path: "updates.assignedUserId", select: "name email role" },
+    { path: "updates.assignedStaffId", select: "name email role" },
+  ]);
+
+  res.status(201).json({
+    success: true,
+    data: populatedTask.toJSON ? populatedTask.toJSON() : populatedTask,
+  });
+});
+
 module.exports = {
   fetchTasks,
   fetchTaskById,
@@ -428,4 +461,5 @@ module.exports = {
   deleteTask,
   reorderTasks,
   updateNumericProgress,
+  addTaskUpdate,
 };

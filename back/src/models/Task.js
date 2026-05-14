@@ -81,6 +81,35 @@ const taskSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
+    updates: [
+      {
+        assignedUserId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        assignedStaffId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Staff",
+        },
+        notes: {
+          type: String,
+          trim: true,
+          maxlength: 2000,
+        },
+        actionText: {
+          type: String,
+          trim: true,
+          maxlength: 1000,
+        },
+        voiceNoteUrl: {
+          type: String,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

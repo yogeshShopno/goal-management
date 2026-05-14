@@ -7,6 +7,7 @@ const {
   deleteTask,
   reorderTasks,
   updateNumericProgress,
+  addTaskUpdate,
 } = require("../controllers/taskController");
 
 const buildTaskRoutes = (env) => {
@@ -35,6 +36,9 @@ const buildTaskRoutes = (env) => {
 
   // DELETE /tasks/:id - Delete a task (requires manage_tasks permission)
   router.delete("/:id", auth, requirePermissions("manage_tasks"), deleteTask);
+
+  // POST /tasks/:id/updates - Add an update to a task
+  router.post("/:id/updates", auth, addTaskUpdate);
 
   return router;
 };

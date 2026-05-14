@@ -9,6 +9,7 @@ import {
   EyeOff,
   Trash2,
   Pencil,
+  Activity,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -22,6 +23,7 @@ import PriorityBadge from '../common/PriorityBadge';
 import TaskNotes from './TaskNotes';
 import TaskForm from './TaskForm';
 import ConfirmDialog from '../common/ConfirmDialog';
+import UpdatesSection from '../updates/UpdatesSection';
 
 function TaskRowInner({
   task,
@@ -40,6 +42,7 @@ function TaskRowInner({
   const [notesOpen, setNotesOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [updatesOpen, setUpdatesOpen] = useState(false);
   const isNumeric = task.taskType === TASK_TYPE.NUMERIC;
   const [countDraft, setCountDraft] = useState(() =>
     isNumeric ? String(task.currentValue ?? 0) : '0'
@@ -275,6 +278,18 @@ function TaskRowInner({
           ) : null}
           <button
             type="button"
+            onClick={() => setUpdatesOpen((v) => !v)}
+            className={`rounded border p-1 transition-colors ${
+              updatesOpen 
+                ? 'border-[var(--color-primary)] bg-indigo-50 text-[var(--color-primary)]' 
+                : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]'
+            }`}
+            aria-label={updatesOpen ? 'Hide updates' : 'Show updates'}
+          >
+            <Activity className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
             onClick={() => setFormOpen(true)}
             className="rounded border border-[var(--color-border)] p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
             aria-label="Edit task"
@@ -295,6 +310,16 @@ function TaskRowInner({
       </div>
 
       <TaskNotes task={task} expanded={notesOpen} />
+      
+      {updatesOpen && (
+        <div className="px-4 pb-4 bg-slate-50/50 rounded-b-md border-t border-[var(--color-border)] mt-2">
+          <UpdatesSection
+            item={task}
+            type="task"
+            onAddUpdate={(payload) => useAppContext().addTaskUpdate(task.id, payload)}
+          />
+        </div>
+      )}
 
       <TaskForm
         open={formOpen}

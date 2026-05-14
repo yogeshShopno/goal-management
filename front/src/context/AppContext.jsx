@@ -1,13 +1,14 @@
 import { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
 import { apiHandler } from '../utils/apiHandler';
 import { fetchGoals, createGoal, updateGoal, deleteGoal } from '../api/goalApi';
-import { fetchActions, createAction, updateAction, deleteAction } from '../api/actionApi';
+import { fetchActions, createAction, updateAction, deleteAction, addActionUpdate as addActionUpdateApi } from '../api/actionApi';
 import {
   fetchTasks,
   createTask,
   updateTask,
   deleteTask,
   reorderTasksForAction,
+  addTaskUpdate as addTaskUpdateApi,
 } from '../api/taskApi';
 import { GOAL_STATUS, ACTION_STATUS, TASK_STATUS, PRIORITY } from '../constants';
 
@@ -162,6 +163,14 @@ export function AppProvider({ children }) {
     });
   }, []);
 
+  const addActionUpdate = useCallback(async (id, payload) => {
+    await apiHandler(() => addActionUpdateApi(id, payload), {
+      successMsg: 'Update added',
+      errorMsg: 'Failed to add update',
+      onSuccess: (data) => dispatch({ type: 'UPDATE_ACTION', payload: data }),
+    });
+  }, []);
+
   const removeAction = useCallback(async (id) => {
     await apiHandler(() => deleteAction(id), {
       successMsg: 'Action deleted',
@@ -185,6 +194,14 @@ export function AppProvider({ children }) {
     await apiHandler(() => updateTask(id, payload), {
       successMsg: 'Task updated',
       errorMsg: 'Failed to update task',
+      onSuccess: (data) => dispatch({ type: 'UPDATE_TASK', payload: data }),
+    });
+  }, []);
+
+  const addTaskUpdate = useCallback(async (id, payload) => {
+    await apiHandler(() => addTaskUpdateApi(id, payload), {
+      successMsg: 'Update added',
+      errorMsg: 'Failed to add update',
       onSuccess: (data) => dispatch({ type: 'UPDATE_TASK', payload: data }),
     });
   }, []);
@@ -262,8 +279,10 @@ export function AppProvider({ children }) {
     addAction,
     editAction,
     removeAction,
+    addActionUpdate,
     addTask,
     editTask,
+    addTaskUpdate,
     updateTaskState,
     removeTask,
     completeTask,

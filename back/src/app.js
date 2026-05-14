@@ -11,7 +11,9 @@ const buildGoalRoutes = require("./routes/goalRoutes");
 const buildActionRoutes = require("./routes/actionRoutes");
 const buildTaskRoutes = require("./routes/taskRoutes");
 const buildStaffRoutes = require("./routes/staffRoutes");
+const buildUploadRoutes = require("./routes/uploadRoutes");
 const { errorHandler, notFound } = require("./middlewares/errorMiddleware");
+const path = require("path");
 
 const app = express();
 
@@ -30,6 +32,7 @@ app.use(morgan(env.nodeEnv === "production" ? "combined" : "dev"));
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.use(
   "/api",
@@ -56,6 +59,7 @@ v1Router.use("/goals", buildGoalRoutes(env));
 v1Router.use("/actions", buildActionRoutes(env));
 v1Router.use("/tasks", buildTaskRoutes(env));
 v1Router.use("/staff", buildStaffRoutes(env));
+v1Router.use("/upload", buildUploadRoutes(env));
 
 app.use("/api/v1", v1Router);
 

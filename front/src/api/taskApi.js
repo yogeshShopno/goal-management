@@ -44,3 +44,8 @@ export async function updateNumericProgress(taskId, operation, currentValue = nu
   });
   return data.data;
 }
+
+export async function addTaskUpdate(id, payload) {
+  const { data } = await axiosInstance.post(`/tasks/${id}/updates`, payload);
+  return data.data;
+}
