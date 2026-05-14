@@ -41,7 +41,7 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
         description: initialTask.description || '',
         startDate: formatDateForInput(initialTask.startDate) || '',
         deadline: formatDateForInput(initialTask.deadline) || '',
-        assignedUserId: initialTask.assignedUserId?.id || initialTask.assignedUserId || '',
+        assignedUserId: initialTask.assignedUserId?.id || initialTask.assignedUserId || initialTask.assignedStaffId?.id || initialTask.assignedStaffId || '',
         
         priority: initialTask.priority || PRIORITY.MEDIUM,
         status: initialTask.status || TASK_STATUS.TODO,
@@ -262,7 +262,24 @@ export default function TaskForm({ open, onClose, actionId, initialTask, onCreat
           </div>
         </div>
 
-     
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="text-sm font-medium text-[var(--color-text)]">Assignee</label>
+            <select
+              className={fieldClass('assignedUserId')}
+              value={form.assignedUserId}
+              onChange={(e) => setForm((f) => ({ ...f, assignedUserId: e.target.value }))}
+            >
+              <option value="">Unassigned</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="text-sm font-medium text-[var(--color-text)]">Status</label>

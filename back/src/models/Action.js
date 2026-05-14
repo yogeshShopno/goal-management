@@ -29,7 +29,6 @@ const actionSchema = new mongoose.Schema(
     ownerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
     },
     ownerStaffId: {
       type: mongoose.Schema.Types.ObjectId,

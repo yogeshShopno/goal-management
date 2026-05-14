@@ -76,7 +76,11 @@ const taskSchema = new mongoose.Schema(
       maxlength: 100,
       default: null,
     },
-
+    /** Current progress for numeric tasks (e.g. 45 out of 100). */
+    currentValue: {
+      type: Number,
+      default: null,
+    },
   },
   {
     timestamps: true,

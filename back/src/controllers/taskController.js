@@ -42,7 +42,7 @@ const fetchTasks = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: tasks,
+    data: tasks.map(t => t.toJSON ? t.toJSON() : t),
   });
 });
 
@@ -62,7 +62,7 @@ const fetchTaskById = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: task,
+    data: task.toJSON ? task.toJSON() : task,
   });
 });
 
@@ -139,7 +139,10 @@ const createTask = asyncHandler(async (req, res) => {
                 : typeof currentValue === "number"
                   ? currentValue
                   : Number(currentValue);
-            return Number.isFinite(c) && c >= 0 ? c : 0;
+            const cv = Number.isFinite(c) && c >= 0 ? c : 0;
+            const tv = typeof targetValue === "number" ? targetValue : Number(targetValue);
+            // Ensure currentValue doesn't exceed targetValue
+            return cv > tv ? tv : cv;
           })(),
         }
       : {
@@ -176,7 +179,7 @@ const createTask = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     success: true,
-    data: populatedTask,
+    data: populatedTask.toJSON ? populatedTask.toJSON() : populatedTask,
   });
 });
 
@@ -267,6 +270,10 @@ const updateTask = asyncHandler(async (req, res) => {
       if (!Number.isFinite(c) || c < 0) {
         throw new ApiError(400, "Current value must be a non-negative number");
       }
+      const targetVal = task.targetValue ?? (targetValue !== undefined ? targetValue : null);
+      if (targetVal != null && c > targetVal) {
+        throw new ApiError(400, `Current value cannot exceed target value of ${targetVal}`);
+      }
       task.currentValue = c;
     }
   }
@@ -296,7 +303,7 @@ const updateTask = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: populatedTask,
+    data: populatedTask.toJSON ? populatedTask.toJSON() : populatedTask,
   });
 });
 
@@ -386,18 +393,30 @@ const updateNumericProgress = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid operation. Use 'increment', 'decrement', or 'set'");
   }
 
-  // Auto-complete if target reached
-  task.currentValue = newValue;
-  if (task.targetValue && newValue >= task.targetValue && task.status !== "completed") {
-    task.status = "completed";
-    task.completedAt = new Date();
+  // Prevent exceeding target value
+  if (task.targetValue != null && newValue > task.targetValue) {
+    throw new ApiError(400, `Value cannot exceed target of ${task.targetValue}`);
   }
 
-  await task.save();
+  // Auto-complete if target reached
+  const updatePayload = {
+    currentValue: newValue,
+  };
+
+  if (task.targetValue && newValue >= task.targetValue && task.status !== "completed") {
+    updatePayload.status = "completed";
+    updatePayload.completedAt = new Date();
+  }
+
+  const updatedTask = await Task.findByIdAndUpdate(id, updatePayload, { new: true }).populate([
+    { path: "actionId", select: "name" },
+    { path: "assignedUserId", select: "name email" },
+    { path: "assignedStaffId", select: "name email" },
+  ]);
 
   res.status(200).json({
     success: true,
-    data: task,
+    data: updatedTask.toJSON ? updatedTask.toJSON() : updatedTask,
   });
 });
 

@@ -69,12 +69,12 @@ function TaskRowInner({
   const persistNumericCount = async () => {
     if (!isNumeric || !canUpdateNumeric || done) return;
     const n = Math.max(0, Number.parseFloat(countDraft));
-    const safe = Number.isFinite(n) ? Math.floor(n) : task.currentValue ?? 0;
-    setCountDraft(String(safe));
-    if (safe !== (task.currentValue ?? 0)) {
+    const capped = Math.min(task.targetValue ?? Infinity, Number.isFinite(n) ? Math.floor(n) : task.currentValue ?? 0);
+    setCountDraft(String(capped));
+    if (capped !== (task.currentValue ?? 0)) {
       try {
         setUpdatingProgress(true);
-        const updated = await updateNumericProgress(task.id, 'set', safe);
+        const updated = await updateNumericProgress(task.id, 'set', capped);
         updateTaskState(updated);
         setCountDraft(String(updated.currentValue ?? 0));
         toast.success('Progress updated');
@@ -88,9 +88,14 @@ function TaskRowInner({
   };
 
   const bumpCount = async (delta) => {
-    if (!isNumeric || !canUpdateNumeric || done) return;
+    if (!isNumeric || !canUpdateNumeric || done || updatingProgress) return;
     const base = Number(task.currentValue ?? 0);
-    const n = Math.max(0, base + delta);
+    const target = task.targetValue ?? Infinity;
+    const n = delta > 0 ? Math.min(base + delta, target) : Math.max(0, base + delta);
+    if (n === base) {
+      if (delta > 0 && base >= target) toast.error(`Already at target: ${target}`);
+      return;
+    }
     setCountDraft(String(n));
     try {
       setUpdatingProgress(true);
@@ -98,6 +103,7 @@ function TaskRowInner({
       const updated = await updateNumericProgress(task.id, op);
       updateTaskState(updated);
       setCountDraft(String(updated.currentValue ?? 0));
+      toast.success('Progress updated');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to update progress');
       setCountDraft(String(task.currentValue ?? 0));
@@ -148,11 +154,15 @@ function TaskRowInner({
                 <input
                   type="number"
                   min="0"
+                  max={task.targetValue ?? undefined}
                   value={countDraft}
                   onChange={(e) => setCountDraft(e.target.value)}
                   onBlur={persistNumericCount}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') persistNumericCount();
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      persistNumericCount();
+                    }
                   }}
                   disabled={done || updatingProgress}
                   placeholder="0"

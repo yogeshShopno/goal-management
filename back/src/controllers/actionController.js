@@ -25,7 +25,7 @@ const fetchActions = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: actions,
+    data: actions.map(a => a.toJSON ? a.toJSON() : a),
   });
 });
 
@@ -47,7 +47,7 @@ const fetchActionById = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: action,
+    data: action.toJSON ? action.toJSON() : action,
   });
 });
 
@@ -92,7 +92,7 @@ const createAction = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     success: true,
-    data: populatedAction,
+    data: populatedAction.toJSON ? populatedAction.toJSON() : populatedAction,
   });
 });
 
@@ -115,18 +115,18 @@ const updateAction = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Start date must be before deadline");
   }
 
-  // Update fields
-  if (goalId) action.goalId = goalId;
-  if (name) action.name = name;
+  // Update fields (use !== undefined to allow falsy but defined values)
+  if (goalId !== undefined) action.goalId = goalId;
+  if (name !== undefined) action.name = name;
   if (description !== undefined) action.description = description;
-  if (startDate) action.startDate = startDate;
-  if (deadline) action.deadline = deadline;
+  if (startDate !== undefined) action.startDate = startDate;
+  if (deadline !== undefined) action.deadline = deadline;
   if (ownerId !== undefined) action.ownerId = ownerId;
   if (ownerStaffId !== undefined) action.ownerStaffId = ownerStaffId;
   if (assignedUserIds !== undefined) action.assignedUserIds = assignedUserIds;
   if (assignedStaffIds !== undefined) action.assignedStaffIds = assignedStaffIds;
-  if (status) action.status = status;
-  if (priority) action.priority = priority;
+  if (status !== undefined) action.status = status;
+  if (priority !== undefined) action.priority = priority;
 
   const updatedAction = await action.save();
   const populatedAction = await updatedAction.populate([
@@ -139,7 +139,7 @@ const updateAction = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: populatedAction,
+    data: populatedAction.toJSON ? populatedAction.toJSON() : populatedAction,
   });
 });
 

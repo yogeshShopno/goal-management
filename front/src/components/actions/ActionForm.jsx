@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Modal from '../common/Modal';
+import { useAuth } from '../../hooks/useAuth';
 import { apiHandler } from '../../utils/apiHandler';
 import { fetchUsersAndStaff } from '../../api/userApi';
 import { formatDateForInput } from '../../utils/dateUtils';
@@ -18,6 +19,7 @@ const empty = {
 };
 
 export default function ActionForm({ open, onClose, goalId, initialAction, onCreate, onSave }) {
+  const { currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [form, setForm] = useState(empty);
   const [attempted, setAttempted] = useState(false);
@@ -36,16 +38,16 @@ export default function ActionForm({ open, onClose, goalId, initialAction, onCre
         description: initialAction.description || '',
         startDate: formatDateForInput(initialAction.startDate) || '',
         deadline: formatDateForInput(initialAction.deadline) || '',
-        ownerId: initialAction.ownerId?.id || initialAction.ownerId || initialAction.ownerStaffId || '',
+        ownerId: initialAction.ownerId?.id || initialAction.ownerId || initialAction.ownerStaffId?.id || initialAction.ownerStaffId || '',
         assignedUserIds: (initialAction.assignedUserIds || []).map((u) => u.id || u),
         assignedStaffIds: (initialAction.assignedStaffIds || []).map((s) => s.id || s),
         priority: initialAction.priority || PRIORITY.MEDIUM,
         status: initialAction.status || ACTION_STATUS.PENDING,
       });
     } else {
-      setForm(empty);
+      setForm({ ...empty, ownerId: currentUser?.id || '' });
     }
-  }, [open, initialAction]);
+  }, [open, initialAction, currentUser]);
 
   const errors = useMemo(() => {
     const e = {};
@@ -161,6 +163,23 @@ export default function ActionForm({ open, onClose, goalId, initialAction, onCre
               value={form.deadline}
               onChange={(e) => setForm((f) => ({ ...f, deadline: e.target.value }))}
             />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="text-sm font-medium text-[var(--color-text)]">Owner *</label>
+            <select
+              className={fieldClass('ownerId')}
+              value={form.ownerId}
+              onChange={(e) => setForm((f) => ({ ...f, ownerId: e.target.value }))}
+            >
+              <option value="">Select owner</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
        

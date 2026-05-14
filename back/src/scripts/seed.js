@@ -284,13 +284,45 @@ const seedDatabase = async () => {
         notes: "",
         order: 2,
       },
+      {
+        actionId: actions[0]._id,
+        name: "Distribution Calls",
+        description: "Make outreach calls to potential students.",
+        startDate: new Date("2025-09-15"),
+        deadline: new Date("2025-10-05"),
+        assignedUserId: users[1]._id,
+        priority: "high",
+        status: "in_progress",
+        notes: "Track each call made",
+        order: 3,
+        taskType: "numeric",
+        targetValue: 100,
+        targetType: "calls",
+        currentValue: 45,
+      },
+      {
+        actionId: actions[1]._id,
+        name: "Email Campaigns",
+        description: "Send targeted email campaigns to prospects.",
+        startDate: new Date("2025-09-20"),
+        deadline: new Date("2025-10-10"),
+        assignedUserId: users[3]._id,
+        priority: "medium",
+        status: "in_progress",
+        notes: "Track emails sent",
+        order: 0,
+        taskType: "numeric",
+        targetValue: 500,
+        targetType: "emails",
+        currentValue: 120,
+      },
     ]);
 
     console.log(`✓ Created ${tasks.length} tasks`);
 
     console.log("\n✅ Database seeding completed successfully!");
     console.log("\nTest Credentials:");
-    console.log("Admin - admin@example.com / admin123");
+    console.log("Admin - ravichovatiya@gmail.com / Ravi@123");
     console.log("Manager - manager@example.com / manager123");
     console.log("User - john@example.com / john123");
 

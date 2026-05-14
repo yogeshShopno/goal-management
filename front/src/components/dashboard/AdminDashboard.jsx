@@ -46,9 +46,7 @@ export default function AdminDashboard() {
         }
       >
         <div className="rounded-[18px] border border-[var(--color-border)] bg-white p-5 shadow-sm">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-            Admin workspace
-          </p>
+       
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
