@@ -15,7 +15,8 @@ export default function ActionList({ goalId, restrictUser, currentUserId, hideAd
     if (!restrictUser) return actions;
     return actions.filter((a) => {
       const oid = a.ownerId?.id || a.ownerId;
-      if (oid === currentUserId) return true;
+      const osid = a.ownerStaffId?.id || a.ownerStaffId;
+      if (oid === currentUserId || osid === currentUserId) return true;
       const assignedIds = (a.assignedUserIds || []).map((u) => u.id || u);
       const assignedStaffIds = (a.assignedStaffIds || []).map((u) => u.id || u);
       return assignedIds.includes(currentUserId) || assignedStaffIds.includes(currentUserId);

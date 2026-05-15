@@ -64,7 +64,14 @@ export function filterGoalsForUser(goals, currentUser) {
   return goals.filter((g) => {
     const rid = g.responsibleId?.id || g.responsibleId;
     const oid = g.ownerId?.id || g.ownerId;
-    return rid === currentUser.id || oid === currentUser.id;
+    const rsid = g.responsibleStaffId?.id || g.responsibleStaffId;
+    const osid = g.ownerStaffId?.id || g.ownerStaffId;
+    return (
+      rid === currentUser.id ||
+      oid === currentUser.id ||
+      rsid === currentUser.id ||
+      osid === currentUser.id
+    );
   });
 }
 

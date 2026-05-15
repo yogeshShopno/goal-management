@@ -25,7 +25,11 @@ export default function TaskList({ actionId, showAddButton = true, restrictUser,
 
   const tasks = useMemo(() => {
     if (!restrictUser) return rawTasks;
-    return rawTasks.filter((t) => t.assignedUserId === currentUserId);
+    return rawTasks.filter((t) => {
+      const aid = t.assignedUserId?.id || t.assignedUserId;
+      const asid = t.assignedStaffId?.id || t.assignedStaffId;
+      return aid === currentUserId || asid === currentUserId;
+    });
   }, [rawTasks, restrictUser, currentUserId]);
 
   const sensors = useSensors(
