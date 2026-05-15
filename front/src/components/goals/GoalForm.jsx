@@ -25,12 +25,31 @@ export default function GoalForm({ open, onClose, initialGoal, onSave }) {
   const [attempted, setAttempted] = useState(false);
 
   useEffect(() => {
-    if (!open || !isAdmin) return;
-    apiHandler(
-      () => staffApi.getStaff({ limit: 1000 }),
-      { onSuccess: (data) => setStaff(data.staff || []) }
-    );
-  }, [open, isAdmin]);
+    if (!open) return;
+    const loadData = async () => {
+      try {
+        const staffRes = await staffApi.getStaff({ limit: 1000 });
+        const staffList = (staffRes.staff || []).map(s => ({
+          ...s,
+          assignmentType: 'staff'
+        }));
+        
+        // Add current user to the list so they can be selected as owner
+        if (currentUser && !staffList.find(s => s.id === currentUser.id)) {
+          staffList.push({
+            id: currentUser.id,
+            name: `${currentUser.name} (Me)`,
+            assignmentType: 'user'
+          });
+        }
+        
+        setStaff(staffList);
+      } catch (err) {
+        console.error('Failed to load staff:', err);
+      }
+    };
+    loadData();
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -72,7 +91,7 @@ export default function GoalForm({ open, onClose, initialGoal, onSave }) {
     return e;
   }, [form]);
 
-  if (!isAdmin) return null;
+  // Allow staff assigned to the goal to edit it
 
   const inputBase =
     'mt-1 w-full rounded-md border bg-[var(--color-card)] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]';
@@ -99,18 +118,32 @@ export default function GoalForm({ open, onClose, initialGoal, onSave }) {
     const isOwnerStaff = owner?.assignmentType === 'staff';
     const isResponsibleStaff = responsible?.assignmentType === 'staff';
 
-    const { error } = await onSave?.({
+    const payload = {
       name: form.name.trim(),
       description: form.description.trim(),
       startDate: form.startDate,
       deadline: form.deadline,
-      ownerId: isOwnerStaff ? null : (form.ownerId || null),
-      ownerStaffId: isOwnerStaff ? form.ownerId : null,
-      responsibleId: isResponsibleStaff ? null : (form.responsibleId || null),
-      responsibleStaffId: isResponsibleStaff ? form.responsibleId : null,
       status: form.status,
       priority: form.priority,
-    });
+    };
+
+    if (isOwnerStaff) {
+      payload.ownerStaffId = form.ownerId;
+      payload.ownerId = null;
+    } else {
+      payload.ownerId = form.ownerId;
+      payload.ownerStaffId = null;
+    }
+
+    if (isResponsibleStaff) {
+      payload.responsibleStaffId = form.responsibleId;
+      payload.responsibleId = null;
+    } else {
+      payload.responsibleId = form.responsibleId;
+      payload.responsibleStaffId = null;
+    }
+
+    const { error } = await onSave?.(payload);
     
     if (!error) {
       onClose?.();
@@ -119,7 +152,7 @@ export default function GoalForm({ open, onClose, initialGoal, onSave }) {
 
   return (
     <Modal
-      open={open && isAdmin}
+      open={open}
       title={initialGoal ? 'Edit goal' : 'Add goal'}
       onClose={onClose}
       footer={
@@ -179,6 +212,23 @@ export default function GoalForm({ open, onClose, initialGoal, onSave }) {
             />
           </div>
         </div>
+
+        <div>
+          <label className="text-sm font-medium text-[var(--color-text)]">Owner *</label>
+          <select
+            className={fieldClass('ownerId')}
+            value={form.ownerId}
+            onChange={(e) => setForm((f) => ({ ...f, ownerId: e.target.value }))}
+          >
+            <option value="">Select owner</option>
+            {staff.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 
           <div>

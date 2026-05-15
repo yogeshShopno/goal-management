@@ -27,8 +27,24 @@ export default function ActionForm({ open, onClose, goalId, initialAction, onCre
 
   useEffect(() => {
     if (!open) return;
-    apiHandler(() => fetchUsersAndStaff(), { onSuccess: (data) => setStaff(data || []) });
-  }, [open]);
+    const loadData = async () => {
+      try {
+        const data = await fetchUsersAndStaff();
+        const list = [...(data || [])];
+        if (currentUser && !list.find(s => s.id === currentUser.id)) {
+          list.push({
+            id: currentUser.id,
+            name: `${currentUser.name} (Me)`,
+            assignmentType: 'user'
+          });
+        }
+        setStaff(list);
+      } catch (err) {
+        console.error('Failed to load users/staff:', err);
+      }
+    };
+    loadData();
+  }, [open, currentUser]);
 
   useEffect(() => {
     if (!open) return;
@@ -106,7 +122,7 @@ export default function ActionForm({ open, onClose, goalId, initialAction, onCre
     };
     
     let res;
-    if (initialAction) res = await onSave?.(initialAction.id, { ...initialAction, ...payload });
+    if (initialAction) res = await onSave?.(initialAction.id, payload);
     else res = await onCreate?.({ ...payload, goalId });
     
     if (!res?.error) {
@@ -193,7 +209,31 @@ export default function ActionForm({ open, onClose, goalId, initialAction, onCre
             </select>
           </div>
         </div>
-       
+
+        <div>
+          <label className="text-sm font-medium text-[var(--color-text)] mb-2 block">Assignees</label>
+          <div className="max-h-40 overflow-y-auto rounded-md border border-[var(--color-border)] p-2 space-y-1 bg-white">
+            {staff.map((u) => {
+              const isStaff = u.assignmentType === 'staff';
+              const isSelected = isStaff 
+                ? form.assignedStaffIds.includes(u.id)
+                : form.assignedUserIds.includes(u.id);
+              
+              return (
+                <label key={u.id} className="flex items-center gap-2 px-2 py-1 hover:bg-slate-50 rounded cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleAssignee(u.id, isStaff)}
+                    className="rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                  />
+                  <span className="text-sm text-[var(--color-text)]">{u.name}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="text-sm font-medium text-[var(--color-text)]">Status</label>

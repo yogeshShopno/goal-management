@@ -157,9 +157,9 @@ export default function ActionCard({ action, restrictUser, currentUserId }) {
       <ActionForm
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        goalId={action.goalId}
+        goalId={action.goalId?.id || action.goalId}
         initialAction={action}
-        onSave={(id, payload) => editAction(id, payload)}
+        onSave={(id, payload) => editAction(id || action.id, payload)}
       />
 
       <ConfirmDialog

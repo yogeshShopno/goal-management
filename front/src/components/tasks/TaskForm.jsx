@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Modal from '../common/Modal';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../hooks/useAuth';
 import { apiHandler } from '../../utils/apiHandler';
 import { fetchUsersAndStaff } from '../../api/userApi';
 import { formatDateForInput } from '../../utils/dateUtils';
@@ -22,14 +23,31 @@ const empty = {
 };
 
 export default function TaskForm({ open, onClose, actionId, initialTask, onCreate, onSave }) {
+  const { currentUser } = useAuth();
   const [staff, setStaff] = useState([]);
   const [form, setForm] = useState(empty);
   const [attempted, setAttempted] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    apiHandler(() => fetchUsersAndStaff(), { onSuccess: (data) => setStaff(data || []) });
-  }, [open]);
+    const loadData = async () => {
+      try {
+        const data = await fetchUsersAndStaff();
+        const list = [...(data || [])];
+        if (currentUser && !list.find(s => s.id === currentUser.id)) {
+          list.push({
+            id: currentUser.id,
+            name: `${currentUser.name} (Me)`,
+            assignmentType: 'user'
+          });
+        }
+        setStaff(list);
+      } catch (err) {
+        console.error('Failed to load users/staff:', err);
+      }
+    };
+    loadData();
+  }, [open, currentUser]);
 
   useEffect(() => {
     if (!open) return;
