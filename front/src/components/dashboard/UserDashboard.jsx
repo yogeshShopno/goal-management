@@ -4,7 +4,6 @@ import { useAuth } from '../../hooks/useAuth';
 import { useGoals, filterGoalsForUser } from '../../hooks/useGoals';
 import AppShell from '../layout/AppShell';
 import Sidebar from '../layout/Sidebar';
-import FilterBar from '../common/FilterBar';
 import StatsCards from '../stats/StatsCards';
 import GoalPanel from '../goals/GoalPanel';
 
@@ -35,7 +34,6 @@ export default function UserDashboard() {
         <Sidebar goals={goals} selectedGoalId={selectedGoalId} onSelectGoal={selectGoal} />
       }
     >
-      <FilterBar filter={filter} sort={sort} onFilterChange={setFilter} onSortChange={setSort} />
       <GoalPanel goal={selectedGoal} />
     </AppShell>
   );

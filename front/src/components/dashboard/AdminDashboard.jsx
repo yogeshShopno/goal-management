@@ -1,18 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { LayoutGrid, Users } from 'lucide-react';
+import { LayoutGrid, Users, Plus } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../hooks/useAuth';
 import { useGoals, filterGoalsForUser } from '../../hooks/useGoals';
 import AppShell from '../layout/AppShell';
 import Sidebar from '../layout/Sidebar';
-import FilterBar from '../common/FilterBar';
 import StatsCards from '../stats/StatsCards';
 import GoalPanel from '../goals/GoalPanel';
 import GoalForm from '../goals/GoalForm';
 import StaffManagement from '../staff/StaffManagement';
 
 const tabBtn =
-  'inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2';
+  'inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]';
 
 export default function AdminDashboard() {
   const { state } = useAppContext();
@@ -45,65 +44,46 @@ export default function AdminDashboard() {
           <Sidebar goals={goals} selectedGoalId={selectedGoalId} onSelectGoal={selectGoal} />
         }
       >
-        <div className="rounded-[18px] border border-[var(--color-border)] bg-white p-5 shadow-sm">
-
-          <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-1 p-1 bg-slate-50 rounded-xl border border-slate-100">
             <button
               type="button"
               onClick={() => setCurrentView('dashboard')}
               className={`${tabBtn} ${currentView === 'dashboard'
-                  ? 'bg-[var(--color-primary)] text-white shadow-md shadow-indigo-200/50'
-                  : 'border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text)] hover:border-[var(--color-border-active)]'
+                  ? 'bg-white text-[var(--color-primary)] shadow-sm'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
                 }`}
             >
-              <LayoutGrid className="h-4 w-4 shrink-0" aria-hidden />
+              <LayoutGrid className="h-4 w-4" />
               Dashboard
             </button>
             <button
               type="button"
               onClick={() => setCurrentView('staff')}
               className={`${tabBtn} ${currentView === 'staff'
-                  ? 'bg-[var(--color-primary)] text-white shadow-md shadow-indigo-200/50'
-                  : 'border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text)] hover:border-[var(--color-border-active)]'
+                  ? 'bg-white text-[var(--color-primary)] shadow-sm'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
                 }`}
             >
-              <Users className="h-4 w-4 shrink-0" aria-hidden />
+              <Users className="h-4 w-4" />
               Staff
             </button>
           </div>
+
+          {currentView === 'dashboard' && (
+            <button
+              type="button"
+              onClick={() => setGoalModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-100 transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-indigo-200 active:scale-95"
+            >
+              <Plus className="h-4 w-4" />
+              New Goal
+            </button>
+          )}
         </div>
 
         {currentView === 'dashboard' ? (
-          <>
-            <div className="rounded-[18px] border border-[var(--color-border)] bg-white p-5 shadow-sm">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex gap-4 items-center">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary-light)] text-[var(--color-primary)]">
-                    <Users className="h-6 w-6" aria-hidden />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-[var(--color-text)]">Workspace</h2>
-
-                   
-                  </div>
-                </div>
-          
-                <button
-                  type="button"
-                  onClick={() => setGoalModalOpen(true)}
-                  className="inline-flex items-center justify-center rounded-xl border border-[var(--color-primary)] bg-[var(--color-primary)] px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-lg hover:shadow-indigo-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                >
-                  Create Goal
-                </button>
-              </div>
-            </div>
-
-            <div className="rounded-[18px] border border-[var(--color-border)] bg-white p-4 shadow-sm">
-              <FilterBar filter={filter} sort={sort} onFilterChange={setFilter} onSortChange={setSort} />
-            </div>
-
-            <GoalPanel goal={selectedGoal} />
-          </>
+          <GoalPanel goal={selectedGoal} />
         ) : (
           <StaffManagement />
         )}

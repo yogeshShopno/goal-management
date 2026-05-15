@@ -63,49 +63,49 @@ export default function GoalPanel({ goal }) {
   }
 
   return (
-    <div className="min-h-[500px] rounded-2xl bg-white p-6 shadow-sm border border-[var(--color-border)] animate-fade-in">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between border-b border-[var(--color-border)] pb-8">
+    <div className="min-h-[500px] rounded-2xl bg-white p-8 shadow-sm border border-[var(--color-border)] animate-fade-in">
+      <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between border-b border-slate-100 pb-8">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-3 mb-4">
+          <div className="flex flex-wrap items-center gap-3 mb-6">
             <GoalBadge status={goal.status} priority={goal.priority} />
-            <div className="h-4 w-px bg-[var(--color-border)]"></div>
-            <span className="text-xs font-bold text-[var(--color-primary)] uppercase tracking-wider">
-              {progress}% Complete
+            <span className="h-4 w-px bg-slate-200"></span>
+            <span className="text-[10px] font-black text-[var(--color-primary)] uppercase tracking-[0.2em]">
+              {progress}% COMPLETED
             </span>
           </div>
           
-          <h2 className="text-3xl font-extrabold tracking-tight text-[var(--color-text)] mb-4">
+          <h2 className="text-4xl font-black tracking-tight text-slate-900 mb-6">
             {goal.name}
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-            <div className="flex items-center gap-2.5 text-[var(--color-text-muted)]">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-500">
-                <Calendar className="h-4 w-4" />
+          <div className="flex flex-wrap gap-x-8 gap-y-4 mb-8">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100">
+                <Calendar className="h-5 w-5" />
               </div>
               <div className="flex flex-col">
-                <span className="text-[10px] font-bold uppercase tracking-widest leading-none mb-0.5">Deadline</span>
-                <span className="text-sm font-semibold text-[var(--color-text)]">{formatDeadline(goal.deadline)}</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 leading-none mb-1">Deadline</span>
+                <span className="text-sm font-bold text-slate-700">{formatDeadline(goal.deadline)}</span>
               </div>
             </div>
-            <div className="flex items-center gap-2.5 text-[var(--color-text-muted)]">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-500">
-                <User className="h-4 w-4" />
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100">
+                <User className="h-5 w-5" />
               </div>
               <div className="flex flex-col">
-                <span className="text-[10px] font-bold uppercase tracking-widest leading-none mb-0.5">Owner</span>
-                <span className="text-sm font-semibold text-[var(--color-text)]">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 leading-none mb-1">Owner</span>
+                <span className="text-sm font-bold text-slate-700">
                   {userDisplayName(owner, state.users)}
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2.5 text-[var(--color-text-muted)]">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-500">
-                <User className="h-4 w-4" />
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100">
+                <User className="h-5 w-5" />
               </div>
               <div className="flex flex-col">
-                <span className="text-[10px] font-bold uppercase tracking-widest leading-none mb-0.5">Responsible</span>
-                <span className="text-sm font-semibold text-[var(--color-text)]">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 leading-none mb-1">Responsible</span>
+                <span className="text-sm font-bold text-slate-700">
                   {userDisplayName(responsible, state.users)}
                 </span>
               </div>
@@ -113,18 +113,18 @@ export default function GoalPanel({ goal }) {
           </div>
 
           {goal.description && (
-            <div className="flex gap-3 p-4 rounded-xl bg-slate-50 border border-slate-100 mb-6">
-              <Info className="h-5 w-5 text-slate-400 shrink-0 mt-0.5" />
-              <p className="text-sm text-slate-600 leading-relaxed italic">
+            <div className="relative p-5 rounded-2xl bg-indigo-50/30 border border-indigo-100/50 mb-8 overflow-hidden">
+              <Info className="absolute -right-2 -bottom-2 h-16 w-16 text-indigo-500/5 pointer-events-none" />
+              <p className="relative text-sm text-slate-600 leading-relaxed font-medium italic">
                 "{goal.description}"
               </p>
             </div>
           )}
 
-          <div className="w-full max-w-xl">
-            <div className="flex justify-between items-end mb-2">
-              <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Overall Progress</span>
-              <span className="text-sm font-bold text-[var(--color-primary)]">{progress}%</span>
+          <div className="w-full max-w-xl bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+            <div className="flex justify-between items-center mb-2.5 px-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Progress</span>
+              <span className="text-sm font-black text-[var(--color-primary)]">{progress}%</span>
             </div>
             <ProgressBar value={progress} size="lg" gradient />
           </div>
@@ -173,18 +173,20 @@ export default function GoalPanel({ goal }) {
         </div>
       </div>
 
-      <div className="mt-8">
-        <div className="flex items-center gap-2 mb-6">
+      <div className="mt-8 flex flex-col max-h-[600px] rounded-2xl border border-[var(--color-border)] bg-slate-50/50 overflow-hidden">
+        <div className="flex items-center gap-2 p-5 border-b border-[var(--color-border)] bg-white shrink-0">
           <ListTodo className="h-5 w-5 text-[var(--color-primary)]" />
           <h4 className="text-lg font-bold text-[var(--color-text)] tracking-tight">Action Items</h4>
         </div>
         
-        <ActionList
-          goalId={goal.id}
-          restrictUser={!isAdmin}
-          currentUserId={currentUser.id}
-          hideAddButton={isAdmin}
-        />
+        <div className="flex-1 overflow-y-auto p-5 scrollbar-thin">
+          <ActionList
+            goalId={goal.id}
+            restrictUser={!isAdmin}
+            currentUserId={currentUser.id}
+            hideAddButton={isAdmin}
+          />
+        </div>
       </div>
 
       <ActionForm
