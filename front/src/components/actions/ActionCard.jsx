@@ -79,19 +79,19 @@ export default function ActionCard({ action, restrictUser, currentUserId }) {
               </p>
             )}
 
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-1.5">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-50 text-[var(--color-primary)]">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-50 text-[var(--color-primary)] shrink-0">
                   <User className="h-3 w-3" />
                 </div>
-                <span className="text-xs font-medium text-[var(--color-text-muted)]">
+                <span className="text-xs font-medium text-[var(--color-text-muted)] truncate max-w-[100px] sm:max-w-none">
                   {userDisplayName(action.ownerId, state.users)}
                 </span>
               </div>
               
-              <div className="flex-1 max-w-[200px] flex items-center gap-3">
+              <div className="flex-1 min-w-[140px] max-w-[200px] flex items-center gap-3">
                 <ProgressBar value={progress} size="xs" gradient />
-                <span className="text-xs font-bold text-[var(--color-primary)]">{progress}%</span>
+                <span className="text-xs font-bold text-[var(--color-primary)] shrink-0">{progress}%</span>
               </div>
             </div>
           </div>

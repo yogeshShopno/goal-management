@@ -32,12 +32,15 @@ export default function AppShell({ sidebar, children, stats }) {
             </aside>
 
             <aside
-              className={`fixed top-16 bottom-0 left-0 z-40 flex w-[min(100%,20rem)] flex-col border-r border-[var(--color-border)] bg-[var(--color-card)] transition-transform min-[1024px]:hidden ${
+              className={`fixed top-0 bottom-0 left-0 z-50 flex w-[280px] flex-col border-r border-[var(--color-border)] bg-[var(--color-card)] shadow-2xl transition-transform min-[1024px]:hidden ${
                 drawerOpen ? 'translate-x-0' : '-translate-x-full'
               }`}
             >
-              <div className="flex items-center justify-between border-b border-[var(--color-border)] p-4">
-                <span className="text-base font-semibold text-[var(--color-text)]">My Goals</span>
+              <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-[var(--color-primary)]"></div>
+                  <span className="text-sm font-bold uppercase tracking-widest text-[var(--color-text)]">Workspace</span>
+                </div>
                 <button
                   type="button"
                   className="text-sm font-medium text-[var(--color-primary)]"
@@ -53,7 +56,7 @@ export default function AppShell({ sidebar, children, stats }) {
               <button
                 type="button"
                 aria-label="Close sidebar"
-                className="fixed inset-0 top-16 z-30 bg-slate-900/40 backdrop-blur-sm min-[1024px]:hidden"
+                className="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm transition-opacity min-[1024px]:hidden"
                 onClick={() => setDrawerOpen(false)}
               />
             ) : null}

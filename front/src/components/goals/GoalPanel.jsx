@@ -63,7 +63,7 @@ export default function GoalPanel({ goal }) {
   }
 
   return (
-    <div className="min-h-[500px] rounded-2xl bg-white p-8 shadow-sm border border-[var(--color-border)] animate-fade-in">
+    <div className="min-h-[500px] rounded-2xl bg-white p-4 sm:p-8 shadow-sm border border-[var(--color-border)] animate-fade-in">
       <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between border-b border-slate-100 pb-8">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-3 mb-6">
@@ -78,9 +78,9 @@ export default function GoalPanel({ goal }) {
             {goal.name}
           </h2>
 
-          <div className="flex flex-wrap gap-x-8 gap-y-4 mb-8">
+           <div className="grid grid-cols-1 gap-4 sm:flex sm:flex-wrap sm:gap-x-8 sm:gap-y-4 mb-8">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100 shrink-0">
                 <Calendar className="h-5 w-5" />
               </div>
               <div className="flex flex-col">
@@ -89,23 +89,23 @@ export default function GoalPanel({ goal }) {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100 shrink-0">
                 <User className="h-5 w-5" />
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 leading-none mb-1">Owner</span>
-                <span className="text-sm font-bold text-slate-700">
+                <span className="text-sm font-bold text-slate-700 truncate max-w-[120px] sm:max-w-none">
                   {userDisplayName(owner, state.users)}
                 </span>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100 shrink-0">
                 <User className="h-5 w-5" />
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 leading-none mb-1">Responsible</span>
-                <span className="text-sm font-bold text-slate-700">
+                <span className="text-sm font-bold text-slate-700 truncate max-w-[120px] sm:max-w-none">
                   {userDisplayName(responsible, state.users)}
                 </span>
               </div>

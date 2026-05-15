@@ -211,11 +211,11 @@ export default function StaffManagement() {
           <Filter className="h-4 w-4 text-[var(--color-text-muted)]" aria-hidden />
           Filters
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <select
             value={filters.role}
             onChange={(e) => handleFilterChange('role', e.target.value)}
-            className={selectClass}
+            className={`${selectClass} flex-1 min-w-[140px]`}
             aria-label="Filter by role"
           >
             <option value="">All roles</option>
@@ -227,7 +227,7 @@ export default function StaffManagement() {
           <select
             value={filters.isActive}
             onChange={(e) => handleFilterChange('isActive', e.target.value)}
-            className={selectClass}
+            className={`${selectClass} flex-1 min-w-[140px]`}
             aria-label="Filter by status"
           >
             <option value="">All statuses</option>

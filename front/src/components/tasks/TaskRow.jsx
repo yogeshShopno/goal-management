@@ -141,7 +141,7 @@ function TaskRowInner({
       }`}
     >
       {/* ── Main task bar ── */}
-      <div className="flex items-center gap-2.5 px-3 py-2.5">
+      <div className="flex flex-wrap items-center gap-2.5 px-3 py-2.5 sm:flex-nowrap">
         {/* Drag handle */}
         {enableSort ? (
           <button
@@ -239,28 +239,35 @@ function TaskRowInner({
         )}
 
         {/* Task name + meta */}
-        <div className="min-w-0 flex-1">
-          <div className={`text-sm font-semibold leading-tight ${done ? 'text-[var(--color-text-muted)] line-through' : 'text-[var(--color-text)]'}`}>
+        <div className="min-w-0 flex-1 py-1">
+          <div className={`text-sm font-semibold leading-tight mb-1 ${done ? 'text-[var(--color-text-muted)] line-through' : 'text-[var(--color-text)]'}`}>
             {task.name}
           </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-[var(--color-text-muted)]">
-            <span>
-              Due: {task.deadline
-                ? (() => {
-                    try { return format(parseISO(task.deadline), 'MMM d, yyyy'); }
-                    catch { return task.deadline; }
-                  })()
-                : '—'}
-            </span>
-            <span>·</span>
-            <span>
-              {userDisplayName(task.assignedUserId, state.users)}
-            </span>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[11px] font-medium text-[var(--color-text-muted)]">
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] uppercase tracking-wider opacity-60">Due:</span>
+              <span className="font-bold text-[var(--color-text-muted)]">
+                {task.deadline
+                  ? (() => {
+                      try { return format(parseISO(task.deadline), 'MMM d'); }
+                      catch { return task.deadline; }
+                    })()
+                  : '—'}
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] uppercase tracking-wider opacity-60">Asgn:</span>
+              <span className="font-bold text-[var(--color-text-muted)] truncate max-w-[80px]">
+                {userDisplayName(task.assignedUserId, state.users)}
+              </span>
+            </div>
+
             <PriorityBadge priority={task.priority} />
+            
             {daysFromStart !== null && (
               <span
-                title={`Started: ${task.startDate ? format(parseISO(task.startDate), 'MMM d, yyyy') : '—'}`}
-                className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tighter ${
                   daysFromStart === 0
                     ? 'bg-blue-100 text-blue-700'
                     : daysFromStart > 0
@@ -269,17 +276,12 @@ function TaskRowInner({
                 }`}
               >
                 {daysFromStart === 0
-                  ? 'Starts today'
+                  ? 'Today'
                   : daysFromStart < 0
-                  ? `Starts in ${Math.abs(daysFromStart)}d`
+                  ? `In ${Math.abs(daysFromStart)}d`
                   : `Day ${daysFromStart}`}
               </span>
             )}
-            {done && task.completedAt ? (
-              <span className="text-emerald-600">
-                Completed {format(parseISO(task.completedAt), 'MMM d')}
-              </span>
-            ) : null}
           </div>
         </div>
 

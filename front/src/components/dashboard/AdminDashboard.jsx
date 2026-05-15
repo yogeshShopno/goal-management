@@ -44,8 +44,8 @@ export default function AdminDashboard() {
           <Sidebar goals={goals} selectedGoalId={selectedGoalId} onSelectGoal={selectGoal} />
         }
       >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
-          <div className="flex items-center gap-1 p-1 bg-slate-50 rounded-xl border border-slate-100">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-1 p-1 bg-slate-50 rounded-xl border border-slate-100 overflow-x-auto scrollbar-none">
             <button
               type="button"
               onClick={() => setCurrentView('dashboard')}

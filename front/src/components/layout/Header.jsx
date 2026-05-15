@@ -9,7 +9,7 @@ export default function Header({ onOpenSidebar, onAddGoal }) {
       <div className="flex min-w-0 items-center gap-4">
         <button
           type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text)] transition-all hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] min-[900px]:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text)] transition-all hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] min-[1024px]:hidden"
           onClick={onOpenSidebar}
           aria-label="Open menu"
         >
@@ -19,8 +19,8 @@ export default function Header({ onOpenSidebar, onAddGoal }) {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-[var(--color-primary)] to-[#818cf8] text-white shadow-lg shadow-indigo-200">
             <Target className="h-6 w-6" />
           </div>
-          <h1 className="hidden text-xl font-bold tracking-tight text-[var(--color-text)] sm:block">
-            GoaL Management
+          <h1 className="hidden text-xl font-bold tracking-tight text-[var(--color-text)] sm:block lg:text-2xl">
+            GoaL
           </h1>
         </div>
       </div>
@@ -39,7 +39,7 @@ export default function Header({ onOpenSidebar, onAddGoal }) {
           </div>
           
           <div className="relative group">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border-2 border-[var(--color-border)] bg-white text-[var(--color-primary)] transition-all group-hover:border-[var(--color-primary)]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border-2 border-[var(--color-border)] bg-white text-[var(--color-primary)] transition-all group-hover:border-[var(--color-primary)] md:h-11 md:w-11">
               <UserCircle2 className="h-6 w-6" />
             </div>
           </div>
