@@ -2,17 +2,40 @@ const Action = require("../models/Action");
 const Task = require("../models/Task");
 const ApiError = require("../utils/ApiError");
 const asyncHandler = require("../utils/asyncHandler");
+const mongoose = require("mongoose");
+const { getAdminStaffIds, getAdminStaffIdsAsStrings, isActionAccessible, toStringId } = require("../utils/accessUtils");
 
 // Fetch all actions with optional filters
 const fetchActions = asyncHandler(async (req, res) => {
-  const { goalId, status, priority, ownerId } = req.query;
+  const { goalId, status, priority } = req.query;
 
   const query = {};
 
+  // Only allow filtering by goalId, status, and priority - NOT by ownership
   if (goalId) query.goalId = goalId;
   if (status) query.status = status;
   if (priority) query.priority = priority;
-  if (ownerId) query.ownerId = ownerId;
+
+  const adminStaffIds = await getAdminStaffIds(req.user);
+  
+  console.log(`🔐 fetchActions - User ID: ${req.user._id}, Role: ${req.user.role}`);
+  console.log(`📋 Admin Staff IDs: ${adminStaffIds.map(id => id.toString()).join(", ")}`);
+
+  if (req.user.role === "admin") {
+    query.$or = [
+      { ownerId: req.user._id },
+      { ownerStaffId: { $in: adminStaffIds } },
+      { assignedUserIds: req.user._id },
+      { assignedStaffIds: { $in: adminStaffIds } },
+    ];
+  } else {
+    query.$or = [
+      { ownerId: req.user._id },
+      { ownerStaffId: req.user._id },
+      { assignedUserIds: req.user._id },
+      { assignedStaffIds: req.user._id },
+    ];
+  }
 
   const actions = await Action.find(query)
     .populate("goalId", "name")
@@ -22,6 +45,8 @@ const fetchActions = asyncHandler(async (req, res) => {
     .populate("assignedStaffIds", "name email role")
     .sort({ createdAt: -1 })
     .exec();
+
+  console.log(`📊 Found ${actions.length} actions for user ${req.user._id}`);
 
   res.status(200).json({
     success: true,
@@ -45,6 +70,11 @@ const fetchActionById = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Action not found");
   }
 
+  const adminStaffIds = await getAdminStaffIds(req.user);
+  if (!isActionAccessible(action, req.user, adminStaffIds)) {
+    throw new ApiError(403, "You don't have permission to access this action");
+  }
+
   res.status(200).json({
     success: true,
     data: action.toJSON ? action.toJSON() : action,
@@ -66,6 +96,42 @@ const createAction = asyncHandler(async (req, res) => {
 
   if (new Date(startDate) >= new Date(deadline)) {
     throw new ApiError(400, "Start date must be before deadline");
+  }
+
+  // Authorization check: ensure user can only create actions for themselves or their staff
+  const adminStaffIdsAsStrings = await getAdminStaffIdsAsStrings(req.user);
+  
+  if (req.user.role === "admin") {
+    // Admin can only assign action to themselves or their staff
+    if (ownerId && ownerId !== req.user._id.toString()) {
+      throw new ApiError(403, "You can only create actions for yourself or your staff");
+    }
+    if (ownerStaffId && !adminStaffIdsAsStrings.includes(ownerStaffId.toString())) {
+      throw new ApiError(403, "You can only assign actions to your staff members");
+    }
+    // Validate assigned users are either themselves or their staff
+    if (assignedUserIds && assignedUserIds.length > 0) {
+      for (const userId of assignedUserIds) {
+        if (userId !== req.user._id.toString()) {
+          throw new ApiError(403, "You can only assign actions to yourself or your staff");
+        }
+      }
+    }
+    if (assignedStaffIds && assignedStaffIds.length > 0) {
+      for (const staffId of assignedStaffIds) {
+        if (!adminStaffIdsAsStrings.includes(staffId.toString())) {
+          throw new ApiError(403, "You can only assign actions to your staff members");
+        }
+      }
+    }
+  } else {
+    // Staff can only create actions for themselves
+    if (ownerId && ownerId !== req.user._id.toString()) {
+      throw new ApiError(403, "You can only create actions for yourself");
+    }
+    if (ownerStaffId) {
+      throw new ApiError(403, "Staff members cannot create actions as other staff");
+    }
   }
 
   const action = await Action.create({
@@ -107,17 +173,35 @@ const updateAction = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Action not found");
   }
 
-  // Permission check: admin OR owner OR assigned
-  const isAdmin = req.user.role === "admin";
-  const isOwner =
-    action.ownerId?.toString() === req.user._id.toString() ||
-    action.ownerStaffId?.toString() === req.user._id.toString();
-  const isAssigned =
-    action.assignedUserIds?.some((u) => u.toString() === req.user._id.toString()) ||
-    action.assignedStaffIds?.some((s) => s.toString() === req.user._id.toString());
-
-  if (!isAdmin && !isOwner && !isAssigned) {
+  const adminStaffIds = await getAdminStaffIds(req.user);
+  if (!isActionAccessible(action, req.user, adminStaffIds)) {
     throw new ApiError(403, "You don't have permission to update this action");
+  }
+
+  // Authorization check: ensure user can only update ownership to themselves or their staff
+  if (req.user.role === "admin") {
+    const adminStaffIdsAsStrings = await getAdminStaffIdsAsStrings(req.user);
+    if (ownerId !== undefined && ownerId && ownerId !== req.user._id.toString()) {
+      throw new ApiError(403, "You can only assign action ownership to yourself or your staff");
+    }
+    if (ownerStaffId !== undefined && ownerStaffId && !adminStaffIdsAsStrings.includes(ownerStaffId.toString())) {
+      throw new ApiError(403, "You can only assign actions to your staff members");
+    }
+    // Validate assigned users
+    if (assignedUserIds !== undefined && assignedUserIds && assignedUserIds.length > 0) {
+      for (const userId of assignedUserIds) {
+        if (userId !== req.user._id.toString()) {
+          throw new ApiError(403, "You can only assign actions to yourself or your staff");
+        }
+      }
+    }
+    if (assignedStaffIds !== undefined && assignedStaffIds && assignedStaffIds.length > 0) {
+      for (const staffId of assignedStaffIds) {
+        if (!adminStaffIdsAsStrings.includes(staffId.toString())) {
+          throw new ApiError(403, "You can only assign actions to your staff members");
+        }
+      }
+    }
   }
 
   // Check for date validity
@@ -165,16 +249,8 @@ const deleteAction = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Action not found");
   }
 
-  // Permission check: admin OR owner OR assigned
-  const isAdmin = req.user.role === "admin";
-  const isOwner =
-    action.ownerId?.toString() === req.user._id.toString() ||
-    action.ownerStaffId?.toString() === req.user._id.toString();
-  const isAssigned =
-    action.assignedUserIds?.some((u) => u.toString() === req.user._id.toString()) ||
-    action.assignedStaffIds?.some((s) => s.toString() === req.user._id.toString());
-
-  if (!isAdmin && !isOwner && !isAssigned) {
+  const adminStaffIds = await getAdminStaffIds(req.user);
+  if (!isActionAccessible(action, req.user, adminStaffIds)) {
     throw new ApiError(403, "You don't have permission to delete this action");
   }
 
@@ -198,6 +274,11 @@ const addActionUpdate = asyncHandler(async (req, res) => {
   const action = await Action.findById(id);
   if (!action) {
     throw new ApiError(404, "Action not found");
+  }
+
+  const adminStaffIds = await getAdminStaffIds(req.user);
+  if (!isActionAccessible(action, req.user, adminStaffIds)) {
+    throw new ApiError(403, "You don't have permission to update this action");
   }
 
   const updatePayload = {

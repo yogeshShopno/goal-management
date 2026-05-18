@@ -3,20 +3,18 @@ const Action = require("../models/Action");
 const Task = require("../models/Task");
 const ApiError = require("../utils/ApiError");
 const asyncHandler = require("../utils/asyncHandler");
+const mongoose = require("mongoose");
+const { getAdminStaffIds, getAdminStaffIdsAsStrings, isGoalAccessible, toStringId } = require("../utils/accessUtils");
 
 // Fetch all goals with optional filters
 const fetchGoals = asyncHandler(async (req, res) => {
-  const { status, priority, ownerId, ownerStaffId, responsibleId, responsibleStaffId, startDate, deadline } =
-    req.query;
+  const { status, priority, startDate, deadline } = req.query;
 
   const query = {};
 
+  // Only allow filtering by status, priority, and dates - NOT by ownership/responsibility
   if (status) query.status = status;
   if (priority) query.priority = priority;
-  if (ownerId) query.ownerId = ownerId;
-  if (ownerStaffId) query.ownerStaffId = ownerStaffId;
-  if (responsibleId) query.responsibleId = responsibleId;
-  if (responsibleStaffId) query.responsibleStaffId = responsibleStaffId;
 
   if (startDate || deadline) {
     query.deadline = {};
@@ -24,14 +22,31 @@ const fetchGoals = asyncHandler(async (req, res) => {
     if (deadline) query.deadline.$lte = new Date(deadline);
   }
 
-  // Role-based restrictions: staff/managers only see assigned goals
-  if (req.user.role === "staff" || req.user.role === "manager") {
+  // Build access control conditions based on user role
+  // Get admin staff IDs as ObjectIds for proper MongoDB query matching
+  const adminStaffIds = await getAdminStaffIds(req.user);
+  
+  console.log(`🔐 fetchGoals - User ID: ${req.user._id}, Role: ${req.user.role}`);
+  console.log(`📋 Admin Staff IDs: ${adminStaffIds.map(id => id.toString()).join(", ")}`);
+
+  if (req.user.role === "admin") {
+    // Admin can only see their own goals and their staff's goals
+    query.$or = [
+      { ownerId: req.user._id },
+      { responsibleId: req.user._id },
+      { ownerStaffId: { $in: adminStaffIds } },
+      { responsibleStaffId: { $in: adminStaffIds } },
+    ];
+    console.log(`✅ Admin query built:`, JSON.stringify(query));
+  } else {
+    // Staff/User can only see their own goals
     query.$or = [
       { ownerId: req.user._id },
       { ownerStaffId: req.user._id },
       { responsibleId: req.user._id },
       { responsibleStaffId: req.user._id },
     ];
+    console.log(`✅ Staff query built:`, JSON.stringify(query));
   }
 
   const goals = await Goal.find(query)
@@ -41,6 +56,8 @@ const fetchGoals = asyncHandler(async (req, res) => {
     .populate("responsibleStaffId", "name email role")
     .sort({ createdAt: -1 })
     .exec();
+
+  console.log(`📊 Found ${goals.length} goals for user ${req.user._id}`);
 
   res.status(200).json({
     success: true,
@@ -63,19 +80,9 @@ const fetchGoalById = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Goal not found");
   }
 
-  // Role-based restrictions: staff/managers can only access their assigned goals
-  if (req.user.role === "staff" || req.user.role === "manager") {
-    const ownerIdStr = goal.ownerId?._id?.toString() || goal.ownerId?.toString();
-    const ownerStaffIdStr = goal.ownerStaffId?._id?.toString() || goal.ownerStaffId?.toString();
-    const responsibleIdStr = goal.responsibleId?._id?.toString() || goal.responsibleId?.toString();
-    const responsibleStaffIdStr = goal.responsibleStaffId?._id?.toString() || goal.responsibleStaffId?.toString();
-
-    const isOwner = ownerIdStr === req.user._id.toString() || ownerStaffIdStr === req.user._id.toString();
-    const isResponsible = responsibleIdStr === req.user._id.toString() || responsibleStaffIdStr === req.user._id.toString();
-
-    if (!isOwner && !isResponsible) {
-      throw new ApiError(403, "You don't have permission to access this goal");
-    }
+  const adminStaffIds = await getAdminStaffIds(req.user);
+  if (!isGoalAccessible(goal, req.user, adminStaffIds)) {
+    throw new ApiError(403, "You don't have permission to access this goal");
   }
 
   res.status(200).json({
@@ -98,6 +105,39 @@ const createGoal = asyncHandler(async (req, res) => {
 
   if (new Date(startDate) >= new Date(deadline)) {
     throw new ApiError(400, "Start date must be before deadline");
+  }
+
+  // Authorization check: ensure user can only create goals for themselves or their staff
+  const adminStaffIdsAsStrings = await getAdminStaffIdsAsStrings(req.user);
+  
+  if (req.user.role === "admin") {
+    // Admin can only assign goal to themselves or their staff
+    if (ownerId && ownerId !== req.user._id.toString()) {
+      throw new ApiError(403, "You can only create goals for yourself or your staff");
+    }
+    if (ownerStaffId && !adminStaffIdsAsStrings.includes(ownerStaffId.toString())) {
+      throw new ApiError(403, "You can only assign goals to your staff members");
+    }
+    if (responsibleId && responsibleId !== req.user._id.toString()) {
+      throw new ApiError(403, "You can only assign responsibility to yourself or your staff");
+    }
+    if (responsibleStaffId && !adminStaffIdsAsStrings.includes(responsibleStaffId.toString())) {
+      throw new ApiError(403, "You can only assign responsibility to your staff members");
+    }
+  } else {
+    // Staff can only create goals for themselves
+    if (ownerId && ownerId !== req.user._id.toString()) {
+      throw new ApiError(403, "You can only create goals for yourself");
+    }
+    if (ownerStaffId) {
+      throw new ApiError(403, "Staff members cannot create goals as other staff");
+    }
+    if (responsibleId && responsibleId !== req.user._id.toString()) {
+      throw new ApiError(403, "You can only be assigned as responsible for yourself");
+    }
+    if (responsibleStaffId) {
+      throw new ApiError(403, "Staff members cannot assign responsibility to other staff");
+    }
   }
 
   const goal = await Goal.create({
@@ -137,17 +177,26 @@ const updateGoal = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Goal not found");
   }
 
-  // Permission check: admin OR owner OR responsible
-  const isAdmin = req.user.role === "admin";
-  const isOwner =
-    goal.ownerId?.toString() === req.user._id.toString() ||
-    goal.ownerStaffId?.toString() === req.user._id.toString();
-  const isResponsible =
-    goal.responsibleId?.toString() === req.user._id.toString() ||
-    goal.responsibleStaffId?.toString() === req.user._id.toString();
-
-  if (!isAdmin && !isOwner && !isResponsible) {
+  const adminStaffIds = await getAdminStaffIds(req.user);
+  if (!isGoalAccessible(goal, req.user, adminStaffIds)) {
     throw new ApiError(403, "You don't have permission to update this goal");
+  }
+
+  // Authorization check: ensure user can only update ownership to themselves or their staff
+  if (req.user.role === "admin") {
+    const adminStaffIdsAsStrings = await getAdminStaffIdsAsStrings(req.user);
+    if (ownerId !== undefined && ownerId && ownerId !== req.user._id.toString()) {
+      throw new ApiError(403, "You can only assign goal ownership to yourself or your staff");
+    }
+    if (ownerStaffId !== undefined && ownerStaffId && !adminStaffIdsAsStrings.includes(ownerStaffId.toString())) {
+      throw new ApiError(403, "You can only assign goals to your staff members");
+    }
+    if (responsibleId !== undefined && responsibleId && responsibleId !== req.user._id.toString()) {
+      throw new ApiError(403, "You can only assign responsibility to yourself or your staff");
+    }
+    if (responsibleStaffId !== undefined && responsibleStaffId && !adminStaffIdsAsStrings.includes(responsibleStaffId.toString())) {
+      throw new ApiError(403, "You can only assign responsibility to your staff members");
+    }
   }
 
   // Check for date validity
@@ -201,16 +250,8 @@ const deleteGoal = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Goal not found");
   }
 
-  // Permission check: admin OR owner OR responsible
-  const isAdmin = req.user.role === "admin";
-  const isOwner =
-    goal.ownerId?.toString() === req.user._id.toString() ||
-    goal.ownerStaffId?.toString() === req.user._id.toString();
-  const isResponsible =
-    goal.responsibleId?.toString() === req.user._id.toString() ||
-    goal.responsibleStaffId?.toString() === req.user._id.toString();
-
-  if (!isAdmin && !isOwner && !isResponsible) {
+  const adminStaffIds = await getAdminStaffIds(req.user);
+  if (!isGoalAccessible(goal, req.user, adminStaffIds)) {
     throw new ApiError(403, "You don't have permission to delete this goal");
   }
 

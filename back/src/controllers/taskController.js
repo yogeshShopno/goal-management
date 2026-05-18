@@ -1,6 +1,8 @@
 const Task = require("../models/Task");
 const ApiError = require("../utils/ApiError");
 const asyncHandler = require("../utils/asyncHandler");
+const mongoose = require("mongoose");
+const { getAdminStaffIds, isTaskAccessible, toStringId } = require("../utils/accessUtils");
 
 function applyNumericCompletion(task, body = {}) {
   if (
@@ -24,17 +26,26 @@ function applyNumericCompletion(task, body = {}) {
 
 // Fetch all tasks with optional filters
 const fetchTasks = asyncHandler(async (req, res) => {
-  const { actionId, status, priority, assignedUserId } = req.query;
+  const { actionId, status, priority } = req.query;
 
   const query = {};
 
+  // Only allow filtering by actionId, status, and priority - NOT by assignment
   if (actionId) query.actionId = actionId;
   if (status) query.status = status;
   if (priority) query.priority = priority;
-  if (assignedUserId) query.assignedUserId = assignedUserId;
 
-  // Role-based restrictions: staff/managers only see assigned tasks
-  if (req.user.role === "staff" || req.user.role === "manager") {
+  const adminStaffIds = await getAdminStaffIds(req.user);
+  
+  console.log(`🔐 fetchTasks - User ID: ${req.user._id}, Role: ${req.user.role}`);
+  console.log(`📋 Admin Staff IDs: ${adminStaffIds.map(id => id.toString()).join(", ")}`);
+
+  if (req.user.role === "admin") {
+    query.$or = [
+      { assignedUserId: req.user._id },
+      { assignedStaffId: { $in: adminStaffIds } },
+    ];
+  } else {
     query.$or = [
       { assignedUserId: req.user._id },
       { assignedStaffId: req.user._id },
@@ -47,6 +58,8 @@ const fetchTasks = asyncHandler(async (req, res) => {
     .populate("assignedStaffId", "name email role")
     .sort({ order: 1, createdAt: -1 })
     .exec();
+
+  console.log(`📊 Found ${tasks.length} tasks for user ${req.user._id}`);
 
   res.status(200).json({
     success: true,
@@ -68,14 +81,9 @@ const fetchTaskById = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Task not found");
   }
 
-  // Role-based restrictions: staff/managers can only access their assigned tasks
-  if (req.user.role === "staff" || req.user.role === "manager") {
-    const assignedUserIdStr = task.assignedUserId?._id?.toString() || task.assignedUserId?.toString();
-    const assignedStaffIdStr = task.assignedStaffId?._id?.toString() || task.assignedStaffId?.toString();
-
-    if (assignedUserIdStr !== req.user._id.toString() && assignedStaffIdStr !== req.user._id.toString()) {
-      throw new ApiError(403, "You don't have permission to access this task");
-    }
+  const adminStaffIds = await getAdminStaffIds(req.user);
+  if (!isTaskAccessible(task, req.user, adminStaffIds)) {
+    throw new ApiError(403, "You don't have permission to access this task");
   }
 
   res.status(200).json({
@@ -132,6 +140,27 @@ const createTask = asyncHandler(async (req, res) => {
 
   if (new Date(startDate) >= new Date(deadline)) {
     throw new ApiError(400, "Start date must be before deadline");
+  }
+
+  // Authorization check: ensure user can only assign tasks to themselves or their staff
+  const adminStaffIds = await getAdminStaffIds(req.user);
+  
+  if (req.user.role === "admin") {
+    // Admin can only assign tasks to themselves or their staff
+    if (assignedUserId && assignedUserId !== req.user._id.toString()) {
+      throw new ApiError(403, "You can only assign tasks to yourself or your staff");
+    }
+    if (assignedStaffId && !adminStaffIds.includes(assignedStaffId.toString())) {
+      throw new ApiError(403, "You can only assign tasks to your staff members");
+    }
+  } else {
+    // Staff can only create tasks for themselves
+    if (assignedUserId && assignedUserId !== req.user._id.toString()) {
+      throw new ApiError(403, "You can only create tasks for yourself");
+    }
+    if (assignedStaffId) {
+      throw new ApiError(403, "Staff members cannot assign tasks to other staff");
+    }
   }
 
   // Calculate order if not provided
@@ -229,14 +258,19 @@ const updateTask = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Task not found");
   }
 
-  // Permission check: admin OR assigned
-  const isAdmin = req.user.role === "admin";
-  const isAssigned =
-    task.assignedUserId?.toString() === req.user._id.toString() ||
-    task.assignedStaffId?.toString() === req.user._id.toString();
-
-  if (!isAdmin && !isAssigned) {
+  const adminStaffIds = await getAdminStaffIds(req.user);
+  if (!isTaskAccessible(task, req.user, adminStaffIds)) {
     throw new ApiError(403, "You don't have permission to update this task");
+  }
+
+  // Authorization check: ensure user can only assign tasks to themselves or their staff
+  if (req.user.role === "admin") {
+    if (assignedUserId !== undefined && assignedUserId && assignedUserId !== req.user._id.toString()) {
+      throw new ApiError(403, "You can only assign tasks to yourself or your staff");
+    }
+    if (assignedStaffId !== undefined && assignedStaffId && !adminStaffIds.includes(assignedStaffId.toString())) {
+      throw new ApiError(403, "You can only assign tasks to your staff members");
+    }
   }
 
   // Check for date validity
@@ -344,13 +378,8 @@ const deleteTask = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Task not found");
   }
 
-  // Permission check: admin OR assigned
-  const isAdmin = req.user.role === "admin";
-  const isAssigned =
-    task.assignedUserId?.toString() === req.user._id.toString() ||
-    task.assignedStaffId?.toString() === req.user._id.toString();
-
-  if (!isAdmin && !isAssigned) {
+  const adminStaffIds = await getAdminStaffIds(req.user);
+  if (!isTaskAccessible(task, req.user, adminStaffIds)) {
     throw new ApiError(403, "You don't have permission to delete this task");
   }
 
@@ -407,15 +436,8 @@ const updateNumericProgress = asyncHandler(async (req, res) => {
   }
 
   // Permission check: only admin, assigned user, or assigned staff can update
-  const assignedUserId = task.assignedUserId?._id?.toString() || task.assignedUserId?.toString();
-  const assignedStaffId = task.assignedStaffId?._id?.toString() || task.assignedStaffId?.toString();
-  const userId = req.user._id.toString();
-  
-  const isAdmin = req.user.role === "admin";
-  const isAssignedUser = assignedUserId === userId;
-  const isAssignedStaff = assignedStaffId === userId;
-
-  if (!isAdmin && !isAssignedUser && !isAssignedStaff) {
+  const adminStaffIds = await getAdminStaffIds(req.user);
+  if (!isTaskAccessible(task, req.user, adminStaffIds)) {
     throw new ApiError(403, "You don't have permission to update this task");
   }
 
@@ -466,6 +488,11 @@ const addTaskUpdate = asyncHandler(async (req, res) => {
   const task = await Task.findById(id);
   if (!task) {
     throw new ApiError(404, "Task not found");
+  }
+
+  const adminStaffIds = await getAdminStaffIds(req.user);
+  if (!isTaskAccessible(task, req.user, adminStaffIds)) {
+    throw new ApiError(403, "You don't have permission to update this task");
   }
 
   const updatePayload = {
