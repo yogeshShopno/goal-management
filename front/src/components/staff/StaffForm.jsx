@@ -248,8 +248,6 @@ export default function StaffForm({ staff, onSubmit, onCancel }) {
           >
             <option value="staff">Staff</option>
             <option value="manager">Manager</option>
-            <option value="admin">Admin</option>
-            <option value="user">User</option>
           </select>
           {errors.role ? <p className="mt-1 text-xs text-[var(--color-danger)]">{errors.role}</p> : null}
         </div>

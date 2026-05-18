@@ -305,10 +305,9 @@ const updateTask = asyncHandler(async (req, res) => {
     throw new ApiError(403, "You can only move tasks into actions you can access");
   }
 
+  // Anyone with action-level access can update the task (owner or staff with access)
+  // Additional assignment-scope checks below for admins only
   const adminStaffIds = await getAdminStaffIds(req.user);
-  if (!isTaskAccessible(task, req.user, adminStaffIds)) {
-    throw new ApiError(403, "You don't have permission to update this task");
-  }
 
   // Authorization check: ensure user can only assign tasks to themselves or their staff
   if (req.user.role === "admin") {
@@ -505,11 +504,7 @@ const updateNumericProgress = asyncHandler(async (req, res) => {
     throw new ApiError(403, "You don't have permission to update this task");
   }
 
-  // Permission check: only admin, assigned user, or assigned staff can update
-  const adminStaffIds = await getAdminStaffIds(req.user);
-  if (!isTaskAccessible(task, req.user, adminStaffIds)) {
-    throw new ApiError(403, "You don't have permission to update this task");
-  }
+  // Anyone with action-level access (owner, assigned user, or any staff under the admin) can update numeric progress
 
   let newValue = task.currentValue ?? 0;
 
