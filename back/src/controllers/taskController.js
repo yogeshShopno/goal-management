@@ -1,8 +1,34 @@
 const Task = require("../models/Task");
+const Action = require("../models/Action");
+const Goal = require("../models/Goal");
 const ApiError = require("../utils/ApiError");
 const asyncHandler = require("../utils/asyncHandler");
 const mongoose = require("mongoose");
-const { getAdminStaffIds, isTaskAccessible, toStringId } = require("../utils/accessUtils");
+const {
+  buildGoalCreatorScopeQuery,
+  getAdminStaffIds,
+  includesId,
+  isTaskAccessible,
+  toStringId,
+} = require("../utils/accessUtils");
+
+const combineQueries = (...queries) => {
+  const activeQueries = queries.filter((query) => Object.keys(query).length > 0);
+  if (activeQueries.length === 0) return {};
+  if (activeQueries.length === 1) return activeQueries[0];
+  return { $and: activeQueries };
+};
+
+const getAllowedActionIds = async (user) => {
+  const allowedGoals = await Goal.find(await buildGoalCreatorScopeQuery(user))
+    .select("_id")
+    .lean();
+  const allowedGoalIds = allowedGoals.map((goal) => goal._id);
+  const actions = await Action.find({ goalId: { $in: allowedGoalIds } })
+    .select("_id")
+    .lean();
+  return actions.map((action) => action._id);
+};
 
 function applyNumericCompletion(task, body = {}) {
   if (
@@ -52,7 +78,10 @@ const fetchTasks = asyncHandler(async (req, res) => {
     ];
   }
 
-  const tasks = await Task.find(query)
+  const allowedActionIds = await getAllowedActionIds(req.user);
+  const scopedQuery = combineQueries(query, { actionId: { $in: allowedActionIds } });
+
+  const tasks = await Task.find(scopedQuery)
     .populate("actionId", "name")
     .populate("assignedUserId", "name email role")
     .populate("assignedStaffId", "name email role")
@@ -79,6 +108,11 @@ const fetchTaskById = asyncHandler(async (req, res) => {
 
   if (!task) {
     throw new ApiError(404, "Task not found");
+  }
+
+  const allowedActionIds = await getAllowedActionIds(req.user);
+  if (!includesId(allowedActionIds, task.actionId?._id || task.actionId)) {
+    throw new ApiError(403, "You don't have permission to access this task");
   }
 
   const adminStaffIds = await getAdminStaffIds(req.user);
@@ -142,6 +176,11 @@ const createTask = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Start date must be before deadline");
   }
 
+  const allowedActionIds = await getAllowedActionIds(req.user);
+  if (!includesId(allowedActionIds, actionId)) {
+    throw new ApiError(403, "You can only create tasks inside actions you can access");
+  }
+
   // Authorization check: ensure user can only assign tasks to themselves or their staff
   const adminStaffIds = await getAdminStaffIds(req.user);
   
@@ -150,7 +189,7 @@ const createTask = asyncHandler(async (req, res) => {
     if (assignedUserId && assignedUserId !== req.user._id.toString()) {
       throw new ApiError(403, "You can only assign tasks to yourself or your staff");
     }
-    if (assignedStaffId && !adminStaffIds.includes(assignedStaffId.toString())) {
+    if (assignedStaffId && !includesId(adminStaffIds, assignedStaffId)) {
       throw new ApiError(403, "You can only assign tasks to your staff members");
     }
   } else {
@@ -258,6 +297,14 @@ const updateTask = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Task not found");
   }
 
+  const allowedActionIds = await getAllowedActionIds(req.user);
+  if (!includesId(allowedActionIds, task.actionId)) {
+    throw new ApiError(403, "You don't have permission to update this task");
+  }
+  if (actionId !== undefined && !includesId(allowedActionIds, actionId)) {
+    throw new ApiError(403, "You can only move tasks into actions you can access");
+  }
+
   const adminStaffIds = await getAdminStaffIds(req.user);
   if (!isTaskAccessible(task, req.user, adminStaffIds)) {
     throw new ApiError(403, "You don't have permission to update this task");
@@ -268,7 +315,7 @@ const updateTask = asyncHandler(async (req, res) => {
     if (assignedUserId !== undefined && assignedUserId && assignedUserId !== req.user._id.toString()) {
       throw new ApiError(403, "You can only assign tasks to yourself or your staff");
     }
-    if (assignedStaffId !== undefined && assignedStaffId && !adminStaffIds.includes(assignedStaffId.toString())) {
+    if (assignedStaffId !== undefined && assignedStaffId && !includesId(adminStaffIds, assignedStaffId)) {
       throw new ApiError(403, "You can only assign tasks to your staff members");
     }
   }
@@ -378,6 +425,11 @@ const deleteTask = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Task not found");
   }
 
+  const allowedActionIds = await getAllowedActionIds(req.user);
+  if (!includesId(allowedActionIds, task.actionId)) {
+    throw new ApiError(403, "You don't have permission to delete this task");
+  }
+
   const adminStaffIds = await getAdminStaffIds(req.user);
   if (!isTaskAccessible(task, req.user, adminStaffIds)) {
     throw new ApiError(403, "You don't have permission to delete this task");
@@ -397,6 +449,19 @@ const reorderTasks = asyncHandler(async (req, res) => {
 
   if (!actionId || !Array.isArray(taskIds) || taskIds.length === 0) {
     throw new ApiError(400, "actionId and taskIds array are required");
+  }
+
+  const allowedActionIds = await getAllowedActionIds(req.user);
+  if (!includesId(allowedActionIds, actionId)) {
+    throw new ApiError(403, "You don't have permission to reorder these tasks");
+  }
+
+  const tasksInScope = await Task.countDocuments({
+    _id: { $in: taskIds },
+    actionId,
+  });
+  if (tasksInScope !== taskIds.length) {
+    throw new ApiError(403, "You can only reorder tasks within the selected action");
   }
 
   // Update order for each task
@@ -433,6 +498,11 @@ const updateNumericProgress = asyncHandler(async (req, res) => {
 
   if (task.taskType !== "numeric") {
     throw new ApiError(400, "This task is not a numeric task");
+  }
+
+  const allowedActionIds = await getAllowedActionIds(req.user);
+  if (!includesId(allowedActionIds, task.actionId?._id || task.actionId)) {
+    throw new ApiError(403, "You don't have permission to update this task");
   }
 
   // Permission check: only admin, assigned user, or assigned staff can update
@@ -488,6 +558,11 @@ const addTaskUpdate = asyncHandler(async (req, res) => {
   const task = await Task.findById(id);
   if (!task) {
     throw new ApiError(404, "Task not found");
+  }
+
+  const allowedActionIds = await getAllowedActionIds(req.user);
+  if (!includesId(allowedActionIds, task.actionId)) {
+    throw new ApiError(403, "You don't have permission to update this task");
   }
 
   const adminStaffIds = await getAdminStaffIds(req.user);

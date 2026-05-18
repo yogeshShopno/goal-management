@@ -20,6 +20,28 @@ const getAdminStaffIds = async (user) => {
   return staffDocs.map((staff) => staff._id); // Return ObjectIds directly
 };
 
+const getScopedAdminId = (user) => {
+  if (!user) {
+    return null;
+  }
+
+  if (user.role === "admin") {
+    return user._id;
+  }
+
+  return user.adminId || null;
+};
+
+const getScopedStaffIds = async (user) => {
+  const adminId = getScopedAdminId(user);
+  if (!adminId) {
+    return [];
+  }
+
+  const staffDocs = await Staff.find({ adminId }).select("_id").lean();
+  return staffDocs.map((staff) => staff._id);
+};
+
 // Helper function that returns string IDs for string-based comparisons
 const getAdminStaffIdsAsStrings = async (user) => {
   if (!user || user.role !== "admin") {
@@ -37,6 +59,77 @@ const isMatchingId = (value, id) => {
   return toStringId(value) === toStringId(id);
 };
 
+const includesId = (ids = [], id) =>
+  ids.some((candidate) => isMatchingId(candidate, id));
+
+const buildUserAssignmentQuery = (user, staffIds = []) => {
+  if (user.role === "admin") {
+    return {
+      $or: [
+        { ownerId: user._id },
+        { responsibleId: user._id },
+        { ownerStaffId: { $in: staffIds } },
+        { responsibleStaffId: { $in: staffIds } },
+      ],
+    };
+  }
+
+  return {
+    $or: [
+      { ownerId: user._id },
+      { ownerStaffId: user._id },
+      { responsibleId: user._id },
+      { responsibleStaffId: user._id },
+    ],
+  };
+};
+
+const buildAdminScopeGoalQuery = (user, staffIds = []) => {
+  const adminId = getScopedAdminId(user);
+  if (!adminId) {
+    return buildUserAssignmentQuery(user, staffIds);
+  }
+
+  return {
+    $or: [
+      { adminId },
+      { ownerId: adminId },
+      { responsibleId: adminId },
+      { ownerStaffId: { $in: staffIds } },
+      { responsibleStaffId: { $in: staffIds } },
+    ],
+  };
+};
+
+const buildGoalCreatorScopeQuery = (user) => {
+  const adminId = getScopedAdminId(user);
+  if (!adminId) {
+    return buildUserAssignmentQuery(user);
+  }
+
+  return {
+    $or: [{ adminId }, { ownerId: adminId }, { responsibleId: adminId }],
+  };
+};
+
+const buildAdminScopeAccessQuery = async (user) => {
+  const staffIds = await getScopedStaffIds(user);
+  return buildAdminScopeGoalQuery(user, staffIds);
+};
+
+const buildGoalAccessQuery = async (user) => {
+  const staffIds = await getScopedStaffIds(user);
+  const assignmentQuery = buildUserAssignmentQuery(user, staffIds);
+
+  if (user.role === "admin") {
+    return assignmentQuery;
+  }
+
+  return {
+    $and: [assignmentQuery, buildGoalCreatorScopeQuery(user)],
+  };
+};
+
 const isGoalAccessible = (goal, user, adminStaffIds = []) => {
   const userId = toStringId(user._id);
   if (
@@ -51,14 +144,14 @@ const isGoalAccessible = (goal, user, adminStaffIds = []) => {
   if (user.role === "admin") {
     if (
       goal.ownerStaffId &&
-      adminStaffIds.includes(toStringId(goal.ownerStaffId))
+      includesId(adminStaffIds, goal.ownerStaffId)
     ) {
       return true;
     }
 
     if (
       goal.responsibleStaffId &&
-      adminStaffIds.includes(toStringId(goal.responsibleStaffId))
+      includesId(adminStaffIds, goal.responsibleStaffId)
     ) {
       return true;
     }
@@ -81,14 +174,14 @@ const isActionAccessible = (action, user, adminStaffIds = []) => {
   if (user.role === "admin") {
     if (
       action.ownerStaffId &&
-      adminStaffIds.includes(toStringId(action.ownerStaffId))
+      includesId(adminStaffIds, action.ownerStaffId)
     ) {
       return true;
     }
 
     if (
       action.assignedStaffIds?.some((id) =>
-        adminStaffIds.includes(toStringId(id))
+        includesId(adminStaffIds, id)
       )
     ) {
       return true;
@@ -110,7 +203,7 @@ const isTaskAccessible = (task, user, adminStaffIds = []) => {
   if (user.role === "admin") {
     if (
       task.assignedStaffId &&
-      adminStaffIds.includes(toStringId(task.assignedStaffId))
+      includesId(adminStaffIds, task.assignedStaffId)
     ) {
       return true;
     }
@@ -122,9 +215,15 @@ const isTaskAccessible = (task, user, adminStaffIds = []) => {
 module.exports = {
   getAdminStaffIds,
   getAdminStaffIdsAsStrings,
+  getScopedAdminId,
+  getScopedStaffIds,
+  buildAdminScopeAccessQuery,
+  buildGoalAccessQuery,
+  buildGoalCreatorScopeQuery,
   isGoalAccessible,
   isActionAccessible,
   isTaskAccessible,
+  includesId,
   toStringId,
   toObjectId,
 };

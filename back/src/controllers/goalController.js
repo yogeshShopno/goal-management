@@ -3,23 +3,35 @@ const Action = require("../models/Action");
 const Task = require("../models/Task");
 const ApiError = require("../utils/ApiError");
 const asyncHandler = require("../utils/asyncHandler");
-const mongoose = require("mongoose");
-const { getAdminStaffIds, getAdminStaffIdsAsStrings, isGoalAccessible, toStringId } = require("../utils/accessUtils");
+const {
+  buildGoalAccessQuery,
+  getScopedAdminId,
+  getAdminStaffIds,
+  getAdminStaffIdsAsStrings,
+  isGoalAccessible,
+} = require("../utils/accessUtils");
+
+const combineQueries = (...queries) => {
+  const activeQueries = queries.filter((query) => Object.keys(query).length > 0);
+  if (activeQueries.length === 0) return {};
+  if (activeQueries.length === 1) return activeQueries[0];
+  return { $and: activeQueries };
+};
 
 // Fetch all goals with optional filters
 const fetchGoals = asyncHandler(async (req, res) => {
   const { status, priority, startDate, deadline } = req.query;
 
-  const query = {};
+  const filterQuery = {};
 
   // Only allow filtering by status, priority, and dates - NOT by ownership/responsibility
-  if (status) query.status = status;
-  if (priority) query.priority = priority;
+  if (status) filterQuery.status = status;
+  if (priority) filterQuery.priority = priority;
 
   if (startDate || deadline) {
-    query.deadline = {};
-    if (startDate) query.deadline.$gte = new Date(startDate);
-    if (deadline) query.deadline.$lte = new Date(deadline);
+    filterQuery.deadline = {};
+    if (startDate) filterQuery.deadline.$gte = new Date(startDate);
+    if (deadline) filterQuery.deadline.$lte = new Date(deadline);
   }
 
   // Build access control conditions based on user role
@@ -31,25 +43,28 @@ const fetchGoals = asyncHandler(async (req, res) => {
 
   if (req.user.role === "admin") {
     // Admin can only see their own goals and their staff's goals
-    query.$or = [
+    filterQuery.$or = [
       { ownerId: req.user._id },
       { responsibleId: req.user._id },
       { ownerStaffId: { $in: adminStaffIds } },
       { responsibleStaffId: { $in: adminStaffIds } },
     ];
-    console.log(`✅ Admin query built:`, JSON.stringify(query));
+    console.log(`✅ Admin query built:`, JSON.stringify(filterQuery));
   } else {
     // Staff/User can only see their own goals
-    query.$or = [
+    filterQuery.$or = [
       { ownerId: req.user._id },
       { ownerStaffId: req.user._id },
       { responsibleId: req.user._id },
       { responsibleStaffId: req.user._id },
     ];
-    console.log(`✅ Staff query built:`, JSON.stringify(query));
+    console.log(`✅ Staff query built:`, JSON.stringify(filterQuery));
   }
 
-  const goals = await Goal.find(query)
+  const accessQuery = await buildGoalAccessQuery(req.user);
+  const finalQuery = combineQueries(filterQuery, accessQuery);
+
+  const goals = await Goal.find(finalQuery)
     .populate("ownerId", "name email role")
     .populate("ownerStaffId", "name email role")
     .populate("responsibleId", "name email role")
@@ -61,7 +76,7 @@ const fetchGoals = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: goals,
+    data: goals.map((goal) => (goal.toJSON ? goal.toJSON() : goal)),
   });
 });
 
@@ -78,6 +93,13 @@ const fetchGoalById = asyncHandler(async (req, res) => {
 
   if (!goal) {
     throw new ApiError(404, "Goal not found");
+  }
+
+  const scopedGoal = await Goal.exists(
+    combineQueries({ _id: id }, await buildGoalAccessQuery(req.user))
+  );
+  if (!scopedGoal) {
+    throw new ApiError(403, "You don't have permission to access this goal");
   }
 
   const adminStaffIds = await getAdminStaffIds(req.user);
@@ -145,6 +167,7 @@ const createGoal = asyncHandler(async (req, res) => {
     description,
     startDate,
     deadline,
+    adminId: getScopedAdminId(req.user),
     ownerId,
     ownerStaffId,
     responsibleId,
@@ -175,6 +198,13 @@ const updateGoal = asyncHandler(async (req, res) => {
   const goal = await Goal.findById(id);
   if (!goal) {
     throw new ApiError(404, "Goal not found");
+  }
+
+  const scopedGoal = await Goal.exists(
+    combineQueries({ _id: id }, await buildGoalAccessQuery(req.user))
+  );
+  if (!scopedGoal) {
+    throw new ApiError(403, "You don't have permission to update this goal");
   }
 
   const adminStaffIds = await getAdminStaffIds(req.user);
@@ -224,6 +254,9 @@ const updateGoal = asyncHandler(async (req, res) => {
   if (responsibleStaffId !== undefined) {
     goal.responsibleStaffId = responsibleStaffId;
   }
+  if (!goal.adminId) {
+    goal.adminId = getScopedAdminId(req.user);
+  }
   if (status) goal.status = status;
   if (priority) goal.priority = priority;
 
@@ -248,6 +281,13 @@ const deleteGoal = asyncHandler(async (req, res) => {
   const goal = await Goal.findById(id);
   if (!goal) {
     throw new ApiError(404, "Goal not found");
+  }
+
+  const scopedGoal = await Goal.exists(
+    combineQueries({ _id: id }, await buildGoalAccessQuery(req.user))
+  );
+  if (!scopedGoal) {
+    throw new ApiError(403, "You don't have permission to delete this goal");
   }
 
   const adminStaffIds = await getAdminStaffIds(req.user);

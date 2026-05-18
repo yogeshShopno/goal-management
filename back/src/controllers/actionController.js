@@ -1,9 +1,24 @@
 const Action = require("../models/Action");
 const Task = require("../models/Task");
+const Goal = require("../models/Goal");
 const ApiError = require("../utils/ApiError");
 const asyncHandler = require("../utils/asyncHandler");
 const mongoose = require("mongoose");
-const { getAdminStaffIds, getAdminStaffIdsAsStrings, isActionAccessible, toStringId } = require("../utils/accessUtils");
+const {
+  buildGoalAccessQuery,
+  buildGoalCreatorScopeQuery,
+  getAdminStaffIds,
+  getAdminStaffIdsAsStrings,
+  isActionAccessible,
+  toStringId,
+} = require("../utils/accessUtils");
+
+const combineQueries = (...queries) => {
+  const activeQueries = queries.filter((query) => Object.keys(query).length > 0);
+  if (activeQueries.length === 0) return {};
+  if (activeQueries.length === 1) return activeQueries[0];
+  return { $and: activeQueries };
+};
 
 // Fetch all actions with optional filters
 const fetchActions = asyncHandler(async (req, res) => {
@@ -37,7 +52,13 @@ const fetchActions = asyncHandler(async (req, res) => {
     ];
   }
 
-  const actions = await Action.find(query)
+  const allowedGoals = await Goal.find(await buildGoalCreatorScopeQuery(req.user))
+    .select("_id")
+    .lean();
+  const allowedGoalIds = allowedGoals.map((goal) => goal._id);
+  const scopedQuery = combineQueries(query, { goalId: { $in: allowedGoalIds } });
+
+  const actions = await Action.find(scopedQuery)
     .populate("goalId", "name")
     .populate("ownerId", "name email role")
     .populate("ownerStaffId", "name email role")
@@ -70,6 +91,16 @@ const fetchActionById = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Action not found");
   }
 
+  const scopedGoal = await Goal.exists(
+    combineQueries(
+      { _id: action.goalId?._id || action.goalId },
+      await buildGoalCreatorScopeQuery(req.user)
+    )
+  );
+  if (!scopedGoal) {
+    throw new ApiError(403, "You don't have permission to access this action");
+  }
+
   const adminStaffIds = await getAdminStaffIds(req.user);
   if (!isActionAccessible(action, req.user, adminStaffIds)) {
     throw new ApiError(403, "You don't have permission to access this action");
@@ -96,6 +127,13 @@ const createAction = asyncHandler(async (req, res) => {
 
   if (new Date(startDate) >= new Date(deadline)) {
     throw new ApiError(400, "Start date must be before deadline");
+  }
+
+  const scopedGoal = await Goal.exists(
+    combineQueries({ _id: goalId }, await buildGoalAccessQuery(req.user))
+  );
+  if (!scopedGoal) {
+    throw new ApiError(403, "You can only create actions inside goals you can access");
   }
 
   // Authorization check: ensure user can only create actions for themselves or their staff
@@ -173,9 +211,25 @@ const updateAction = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Action not found");
   }
 
+  const currentScopedGoal = await Goal.exists(
+    combineQueries({ _id: action.goalId }, await buildGoalCreatorScopeQuery(req.user))
+  );
+  if (!currentScopedGoal) {
+    throw new ApiError(403, "You don't have permission to update this action");
+  }
+
   const adminStaffIds = await getAdminStaffIds(req.user);
   if (!isActionAccessible(action, req.user, adminStaffIds)) {
     throw new ApiError(403, "You don't have permission to update this action");
+  }
+
+  if (goalId !== undefined) {
+    const nextScopedGoal = await Goal.exists(
+      combineQueries({ _id: goalId }, await buildGoalAccessQuery(req.user))
+    );
+    if (!nextScopedGoal) {
+      throw new ApiError(403, "You can only move actions into goals you can access");
+    }
   }
 
   // Authorization check: ensure user can only update ownership to themselves or their staff
@@ -249,6 +303,13 @@ const deleteAction = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Action not found");
   }
 
+  const scopedGoal = await Goal.exists(
+    combineQueries({ _id: action.goalId }, await buildGoalCreatorScopeQuery(req.user))
+  );
+  if (!scopedGoal) {
+    throw new ApiError(403, "You don't have permission to delete this action");
+  }
+
   const adminStaffIds = await getAdminStaffIds(req.user);
   if (!isActionAccessible(action, req.user, adminStaffIds)) {
     throw new ApiError(403, "You don't have permission to delete this action");
@@ -274,6 +335,13 @@ const addActionUpdate = asyncHandler(async (req, res) => {
   const action = await Action.findById(id);
   if (!action) {
     throw new ApiError(404, "Action not found");
+  }
+
+  const scopedGoal = await Goal.exists(
+    combineQueries({ _id: action.goalId }, await buildGoalCreatorScopeQuery(req.user))
+  );
+  if (!scopedGoal) {
+    throw new ApiError(403, "You don't have permission to update this action");
   }
 
   const adminStaffIds = await getAdminStaffIds(req.user);

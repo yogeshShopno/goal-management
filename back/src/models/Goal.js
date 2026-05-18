@@ -37,6 +37,11 @@ const goalSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Staff",
     },
+    adminId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      index: true,
+    },
     status: {
       type: String,
       enum: ["todo", "in_progress", "completed", "pending"],
@@ -65,6 +70,7 @@ const goalSchema = new mongoose.Schema(
 // Compound index for efficient queries
 goalSchema.index({ ownerId: 1, createdAt: -1 });
 goalSchema.index({ responsibleId: 1 });
+goalSchema.index({ adminId: 1, createdAt: -1 });
 goalSchema.index({ status: 1 });
 
 module.exports = mongoose.model("Goal", goalSchema);
